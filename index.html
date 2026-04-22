@@ -137,12 +137,21 @@ function render() {
 
 function go(screen) { state.screen = screen; function updateSearch(val) {
   state.search = val;
-  go("client");
-  var input = document.getElementById("search-input");
-  if (input) {
-    input.focus();
-    input.setSelectionRange(val.length, val.length);
-  }
+  var available = state.products.filter(function(p){ return state.availability[String(p.id)]&&state.availability[String(p.id)].on; });
+  var filtered = available.filter(function(p){
+    if (state.catFilter!=="All"&&p.category!==state.catFilter) return false;
+    if (val&&p.name.toLowerCase().indexOf(val.toLowerCase())<0) return false;
+    return true;
+  });
+  // Re-render just the product list, not the whole page
+  var rows = document.querySelectorAll(".product-row");
+  rows.forEach(function(row){ row.style.display="none"; });
+  filtered.forEach(function(p){
+    var row = document.getElementById("prow-"+p.id);
+    if (row) row.style.display="grid";
+  });
+  var count = document.getElementById("product-count");
+  if (count) count.textContent = filtered.length + " products shown";
 }
 
 render(); }
@@ -331,14 +340,14 @@ function clientHTML() {
     filtered.forEach(function(p) {
       var av = state.availability[String(p.id)];
       var qty = state.cart[p.id]||0;
-      html += '<div class="table-row product-row' + (qty>0?" row-sel":"") + '">' +
+      html += '<div id="prow-' + p.id + '" class="table-row product-row' + (qty>0?" row-sel":"") + '">' +
         '<div><div class="p-name">' + p.name + "</div>" + (av&&av.note?'<div class="p-note">'+av.note+"</div>":"") + '<div class="p-cat">' + p.category + "</div></div>" +
         '<div class="p-price">' + fmt(p.price) + "</div>" +
         '<div class="p-unit">' + p.unit + "</div>" +
         '<div class="qty-ctrl">' + (qty>0?'<button class="qty-btn" onclick="updateCart('+p.id+',-1)">-</button><span class="qty-num">'+qty+"</span>":"") +
         '<button class="qty-btn' + (qty>0?" on":"") + '" onclick="updateCart(' + p.id + ',1)">+</button></div></div>';
     });
-    html += '<div style="padding:16px 0;color:var(--muted);font-size:12px">' + filtered.length + " products shown</div>";
+    html += '<div id="product-count" style="padding:16px 0;color:var(--muted);font-size:12px">' + filtered.length + " products shown</div>";
   }
   return html + "</div>";
 }
