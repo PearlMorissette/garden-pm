@@ -137,7 +137,17 @@ function render() {
   else if (state.screen === "history") app.innerHTML = navHTML() + historyHTML();
 }
 
-function go(screen) { state.screen = screen; render(); }
+function go(screen) { state.screen = screen; function updateSearch(val) {
+  state.search = val;
+  go("client");
+  var input = document.getElementById("search-input");
+  if (input) {
+    input.focus();
+    input.setSelectionRange(val.length, val.length);
+  }
+}
+
+render(); }
 
 function loading(msg) {
   document.getElementById("app").innerHTML = (state.screen !== "entry" && state.screen !== "adminauth" ? navHTML() : "") +
@@ -316,7 +326,7 @@ function clientHTML() {
   if (!available.length) {
     html += '<div class="empty"><div class="empty-title">Nothing listed yet</div><p>The garden team has not set this week\'s availability.</p></div>';
   } else {
-    html += '<input class="search-input" placeholder="Search..." value="' + state.search + '" oninput="state.search=this.value;go(\'client\')">' +
+    html += '<input class="search-input" placeholder="Search..." value="' + state.search + '" id="search-input" oninput="updateSearch(this.value)">' +
       '<div class="filter-bar">' + cats.map(function(c){ return '<button class="pill' + (state.catFilter===c?" active":"") + '" onclick="state.catFilter=\'' + c + '\';go(\'client\')">' + c + "</button>"; }).join("") + "</div>" +
       '<div class="table-header product-grid"><div>Product</div><div style="text-align:right">Price</div><div style="text-align:right">Unit</div><div style="text-align:right">Qty</div></div>';
     filtered.forEach(function(p) {
