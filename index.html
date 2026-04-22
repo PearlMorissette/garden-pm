@@ -19,20 +19,11 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .pill{background:transparent;color:var(--muted);border:1px solid var(--border);padding:6px 16px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s}
 .pill.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 .pill.cart-active{color:var(--accent);border-color:var(--accent)}
-.page{display:none}
 .wrap{max-width:900px;margin:0 auto;padding:40px 24px}
 .wrap-sm{max-width:600px;margin:0 auto;padding:40px 24px}
 .wrap-md{max-width:800px;margin:0 auto;padding:40px 24px}
 .pre{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
 .h1{font-family:Georgia,serif;font-size:32px;font-weight:300;margin-bottom:32px}
-#page-entry{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center}
-.entry-logo{font-family:Georgia,serif;font-size:48px;font-weight:300;letter-spacing:-1px;margin-bottom:4px}
-.entry-sub{font-size:14px;letter-spacing:4px;color:var(--muted);margin-bottom:8px}
-.entry-loc{font-size:12px;color:var(--muted);letter-spacing:1px;margin-bottom:56px}
-.entry-btns{display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px}
-.unit-btn{background:var(--card);border:1px solid var(--border);color:var(--cream);padding:18px 24px;font-size:13px;letter-spacing:2px;text-transform:uppercase;transition:all .2s}
-.unit-btn:hover{border-color:var(--accent);color:var(--accent)}
-.admin-link{background:none;border:none;color:var(--muted);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin-top:8px;padding:10px}
 .field-label{display:block;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .field-input{width:100%;background:transparent;border:1px solid var(--border);color:var(--cream);padding:10px 14px;font-size:13px;outline:none;margin-bottom:16px}
 .field-input:focus{border-color:var(--accent)}
@@ -41,12 +32,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .btn-primary{background:var(--accent);color:var(--bg);border:none;padding:11px 24px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
 .btn-secondary{background:transparent;color:var(--cream);border:1px solid var(--border);padding:11px 24px;font-size:11px;letter-spacing:2px;text-transform:uppercase}
 .btn-full{width:100%;padding:14px 0;font-size:12px}
-.auth-card{background:var(--card);border:1px solid var(--border);padding:40px 36px;width:100%;max-width:320px}
-.auth-error{color:#c44;font-size:12px;margin-bottom:12px}
-#page-adminauth{display:flex;align-items:center;justify-content:center;min-height:100vh}
 .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px}
 .search-input{background:var(--card);border:1px solid var(--border);color:var(--cream);padding:10px 14px;font-size:13px;outline:none;width:100%;max-width:280px;margin-bottom:16px}
-.search-input:focus{border-color:var(--accent)}
 .table-header{display:grid;padding:8px 12px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .product-grid{grid-template-columns:1fr 90px 70px 80px}
 .table-row{padding:10px 12px;border-bottom:1px solid var(--border);transition:background .15s}
@@ -56,15 +43,15 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .p-price{text-align:right;font-family:Georgia,serif;font-size:15px}
 .p-unit{text-align:right;font-size:11px;color:var(--muted)}
 .qty-ctrl{display:flex;align-items:center;justify-content:flex-end;gap:8px}
-.qty-btn{background:transparent;border:1px solid var(--border);color:var(--cream);width:24px;height:24px;font-size:14px;display:flex;align-items:center;justify-content:center;line-height:1}
-.qty-btn.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.qty-btn{background:transparent;border:1px solid var(--border);color:var(--cream);width:24px;height:24px;font-size:14px;display:flex;align-items:center;justify-content:center}
+.qty-btn.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
 .qty-num{font-size:13px;min-width:16px;text-align:center}
-.row-selected{background:#161510}
+.row-sel{background:#161510}
 .admin-row{display:grid;grid-template-columns:24px 1fr 200px 50px;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center}
-.status-dot{width:10px;height:10px;border-radius:50%;margin:0 auto}
-.toggle-btn{font-size:10px;font-weight:700;width:48px;padding:6px 0;border:1px solid;text-align:center}
-.toggle-on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
-.toggle-off{background:transparent;color:var(--muted);border-color:var(--border)}
+.dot{width:10px;height:10px;border-radius:50%;margin:0 auto}
+.tog{font-size:10px;font-weight:700;width:48px;padding:6px 0;border:1px solid;text-align:center}
+.tog-on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.tog-off{background:transparent;color:var(--muted);border-color:var(--border)}
 .checkout-row{display:grid;grid-template-columns:1fr 90px 80px 80px;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center}
 .total-bar{border-top:1px solid var(--accent);padding-top:20px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
 .stat-grid{display:grid;gap:1px;margin-bottom:40px}
@@ -73,14 +60,12 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .stat-value{font-family:Georgia,serif;font-size:32px;font-weight:300}
 .stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
 .order-card{background:var(--card);border:1px solid var(--border);margin-bottom:2px}
-.order-card-header{display:grid;grid-template-columns:1fr 100px 80px;gap:12px;padding:14px 16px;align-items:center;cursor:pointer}
+.order-head{display:grid;grid-template-columns:1fr 100px 80px;gap:12px;padding:14px 16px;align-items:center;cursor:pointer}
 .order-detail{border-top:1px solid var(--border);padding:12px 16px}
 .order-detail-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid #1e1d1b}
 .order-note{margin-top:10px;font-size:12px;color:var(--accent);font-style:italic}
 .empty{text-align:center;padding:60px 24px;color:var(--muted)}
 .empty-title{font-family:Georgia,serif;font-size:22px;font-weight:300;margin-bottom:8px;color:var(--cream)}
-.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
-@keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){
   .product-grid,.product-row{grid-template-columns:1fr 70px 50px 70px}
   .admin-row{grid-template-columns:16px 1fr 100px 48px;gap:8px;padding:8px}
@@ -92,83 +77,45 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 </head>
 <body>
 <div id="toast"></div>
-<nav id="main-nav" style="display:none">
-  <div class="logo" onclick="goEntry()">
-    <div class="logo-top">GARDEN</div>
-    <div class="logo-sub">Pearl Morissette</div>
-  </div>
-  <div class="nav-right" id="nav-right"></div>
-</nav>
-<div id="page-entry" class="page active">
-  <div>
-    <div class="entry-logo">Garden</div>
-    <div class="entry-sub">Pearl Morissette</div>
-    <div class="entry-loc">Jordan Station · Niagara</div>
-  </div>
-  <div class="entry-btns">
-    <button class="unit-btn" onclick="selectUnit('Restaurant')">Restaurant</button>
-    <button class="unit-btn" onclick="selectUnit('Bakery')">Bakery</button>
-    <button class="admin-link" onclick="goAdminAuth()">Garden Admin →</button>
-  </div>
-</div>
-<div id="page-adminauth" class="page">
-  <div class="auth-card">
-    <div class="pre">Garden Team</div>
-    <div style="font-family:Georgia,serif;font-size:26px;font-weight:300;margin-bottom:28px">Admin Access</div>
-    <label class="field-label">Passcode</label>
-    <input class="field-input" type="password" id="admin-code" placeholder="••••••••" onkeydown="if(event.key==='Enter')tryAdmin()">
-    <div id="admin-err" class="auth-error" style="display:none">Incorrect passcode</div>
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn-primary" onclick="tryAdmin()">Enter</button>
-      <button class="btn-secondary" onclick="goEntry()">Back</button>
-    </div>
-  </div>
-</div>
-<div id="page-admin" class="page"></div>
-<div id="page-client" class="page"></div>
-<div id="page-checkout" class="page"></div>
-<div id="page-history" class="page"></div>
+<div id="app"></div>
 
 <script>
-const ADMIN_CODE = 'garden2024';
-const STORAGE_KEY_AVAIL = 'gpm_availability';
-const STORAGE_KEY_ORDERS = 'gpm_orders';
-
-const PRODUCTS = [
+var ADMIN_CODE = 'garden2024';
+var PRODUCTS = [
   {id:1,n:'Chicken, Whole',c:'Animals',p:6.64,u:'lb'},{id:2,n:'Chicken, Layer',c:'Animals',p:5.00,u:'lb'},
   {id:3,n:'Eggs, Silkie',c:'Eggs',p:12.00,u:'doz'},{id:4,n:'Eggs, Chicken',c:'Eggs',p:10.50,u:'doz'},{id:5,n:'Eggs, Duck',c:'Eggs',p:12.00,u:'doz'},
   {id:10,n:'Arugula Blossom',c:'Blossoms',p:0.59,u:'pc'},{id:11,n:'Snapdragon',c:'Blossoms',p:0.65,u:'pc'},{id:12,n:'Borage',c:'Blossoms',p:0.30,u:'pc'},
   {id:15,n:'Begonias',c:'Blossoms',p:0.44,u:'pc'},{id:21,n:'Cornflower',c:'Blossoms',p:0.59,u:'pc'},{id:26,n:'Dianthus',c:'Blossoms',p:0.73,u:'pc'},
   {id:28,n:'Fennel Pollen',c:'Blossoms',p:15.00,u:'8oz'},{id:32,n:'Gem Marigold',c:'Blossoms',p:0.30,u:'pc'},{id:33,n:'Nasturtium Blossom',c:'Blossoms',p:0.55,u:'pc'},
   {id:43,n:'Squash Blossom',c:'Blossoms',p:1.50,u:'pc'},{id:46,n:'Alyssum',c:'Blossoms',p:0.79,u:'pc'},
-  {id:50,n:'Fennel Seed',c:'Seeds',p:49.82,u:'lb'},{id:52,n:'Nigella / Black Cumin',c:'Seeds',p:35.00,u:'lb'},{id:53,n:'Peanut',c:'Seeds',p:8.50,u:'lb'},{id:55,n:'Sorghum',c:'Seeds',p:8.00,u:'lb'},
+  {id:50,n:'Fennel Seed',c:'Seeds',p:49.82,u:'lb'},{id:52,n:'Nigella Black Cumin',c:'Seeds',p:35.00,u:'lb'},{id:53,n:'Peanut',c:'Seeds',p:8.50,u:'lb'},{id:55,n:'Sorghum',c:'Seeds',p:8.00,u:'lb'},
   {id:60,n:'Apple Concentrate',c:'Preserves',p:30.00,u:'L'},{id:61,n:'Dried Lesya Peppers',c:'Preserves',p:143.69,u:'lb'},
   {id:63,n:'Ahi Lemon Hot Sauce',c:'Preserves',p:50.00,u:'L'},{id:64,n:'Sundried Cherry Tomato',c:'Preserves',p:50.00,u:'lb'},{id:65,n:'Tomato Sauce',c:'Preserves',p:15.00,u:'L'},
   {id:70,n:'Arugula',c:'Leaf',p:22.32,u:'lb'},{id:72,n:'Broccoli Fiolaro',c:'Leaf',p:8.00,u:'lb'},{id:77,n:'Bay Leaf',c:'Leaf',p:0.40,u:'pc'},
-  {id:78,n:'Bok Choy, Baby',c:'Leaf',p:3.00,u:'lb'},{id:82,n:'Chicory, Felix',c:'Leaf',p:12.00,u:'lb'},{id:88,n:'Cilantro',c:'Leaf',p:0.21,u:'pc'},
+  {id:78,n:'Bok Choy Baby',c:'Leaf',p:3.00,u:'lb'},{id:82,n:'Chicory Felix',c:'Leaf',p:12.00,u:'lb'},{id:88,n:'Cilantro',c:'Leaf',p:0.21,u:'pc'},
   {id:92,n:'Dill by Weight',c:'Leaf',p:12.00,u:'lb'},{id:99,n:'Fennel Fronds',c:'Leaf',p:12.00,u:'lb'},{id:101,n:'Basil',c:'Leaf',p:12.00,u:'lb'},
-  {id:103,n:'Kale, Loose',c:'Leaf',p:8.00,u:'lb'},{id:118,n:'Lettuce, Baby Arugula',c:'Leaf',p:15.00,u:'lb'},{id:121,n:'Lettuce, Little Gem',c:'Leaf',p:15.30,u:'lb'},
-  {id:123,n:'Lettuce, Mesclun Mix',c:'Leaf',p:16.50,u:'lb'},{id:157,n:'Spinach, Baby',c:'Leaf',p:20.00,u:'lb'},{id:161,n:'Swiss Chard',c:'Leaf',p:3.00,u:'lb'},
-  {id:124,n:'Microgreen, Brassica',c:'Microgreens',p:36.75,u:'lb'},{id:125,n:'Microgreen, Pea',c:'Microgreens',p:18.79,u:'lb'},{id:126,n:'Microgreens, Herbs',c:'Microgreens',p:69.59,u:'lb'},
-  {id:170,n:'Fava, Forced',c:'Forced Veg',p:13.93,u:'48oz'},
-  {id:180,n:'Beets, Gold Baby',c:'Roots',p:22.00,u:'lb'},{id:183,n:'Beets, Red Baby',c:'Roots',p:22.00,u:'lb'},{id:186,n:'Beets, Badger Flame',c:'Roots',p:4.32,u:'lb'},
-  {id:187,n:'Carrots, Atlas Baby',c:'Roots',p:20.50,u:'lb'},{id:190,n:'Carrots, Mokum Baby',c:'Roots',p:18.50,u:'lb'},
-  {id:197,n:'Garlic, Bulb',c:'Roots',p:20.52,u:'lb'},{id:199,n:'Garlic, Fresh',c:'Roots',p:23.64,u:'lb'},
-  {id:206,n:'Potato, Pink Fur Apple',c:'Roots',p:3.25,u:'lb'},{id:213,n:'Radish, French Breakfast Baby',c:'Roots',p:12.79,u:'lb'},
-  {id:216,n:'Turmeric',c:'Roots',p:14.00,u:'lb'},{id:218,n:'Turnip, Hakurei Mature',c:'Roots',p:7.95,u:'lb'},
-  {id:230,n:'Bean, Fava',c:'Fruit & Veg',p:8.52,u:'lb'},{id:233,n:'Broccoli, De Cicco',c:'Fruit & Veg',p:11.00,u:'lb'},
-  {id:235,n:'Brussels Sprouts',c:'Fruit & Veg',p:5.89,u:'lb'},{id:237,n:'Cabbage, Caraflex',c:'Fruit & Veg',p:5.20,u:'lb'},
-  {id:238,n:'Cauliflower, Head',c:'Fruit & Veg',p:4.59,u:'lb'},{id:244,n:'Corn',c:'Fruit & Veg',p:3.00,u:'lb'},
-  {id:245,n:'Cucumber, Suyo Long Gherkin',c:'Fruit & Veg',p:11.00,u:'lb'},{id:248,n:'Eggplant, Fairytale',c:'Fruit & Veg',p:3.06,u:'lb'},
-  {id:250,n:'Fennel Bulb',c:'Fruit & Veg',p:5.00,u:'lb'},{id:267,n:'Pea, Beauregarde',c:'Fruit & Veg',p:8.67,u:'lb'},
-  {id:270,n:'Pepper, Ahi Lemon',c:'Fruit & Veg',p:18.00,u:'lb'},{id:274,n:'Pepper, Shishito',c:'Fruit & Veg',p:8.00,u:'lb'},
-  {id:283,n:'Squash, Summer',c:'Fruit & Veg',p:4.00,u:'lb'},{id:285,n:'Strawberry, Alpine',c:'Fruit & Veg',p:0.16,u:'pc'},
-  {id:287,n:'Tomato, Dr. Wych',c:'Fruit & Veg',p:5.50,u:'lb'},{id:288,n:'Tomato, Sungold',c:'Fruit & Veg',p:7.75,u:'lb'},
-  {id:291,n:'Tomato, Super Sweet Cherry',c:'Fruit & Veg',p:7.75,u:'lb'},
+  {id:103,n:'Kale Loose',c:'Leaf',p:8.00,u:'lb'},{id:118,n:'Lettuce Baby Arugula',c:'Leaf',p:15.00,u:'lb'},{id:121,n:'Lettuce Little Gem',c:'Leaf',p:15.30,u:'lb'},
+  {id:123,n:'Lettuce Mesclun Mix',c:'Leaf',p:16.50,u:'lb'},{id:157,n:'Spinach Baby',c:'Leaf',p:20.00,u:'lb'},{id:161,n:'Swiss Chard',c:'Leaf',p:3.00,u:'lb'},
+  {id:124,n:'Microgreen Brassica',c:'Microgreens',p:36.75,u:'lb'},{id:125,n:'Microgreen Pea',c:'Microgreens',p:18.79,u:'lb'},{id:126,n:'Microgreens Herbs',c:'Microgreens',p:69.59,u:'lb'},
+  {id:170,n:'Fava Forced',c:'Forced Veg',p:13.93,u:'48oz'},
+  {id:180,n:'Beets Gold Baby',c:'Roots',p:22.00,u:'lb'},{id:183,n:'Beets Red Baby',c:'Roots',p:22.00,u:'lb'},{id:186,n:'Beets Badger Flame',c:'Roots',p:4.32,u:'lb'},
+  {id:187,n:'Carrots Atlas Baby',c:'Roots',p:20.50,u:'lb'},{id:190,n:'Carrots Mokum Baby',c:'Roots',p:18.50,u:'lb'},
+  {id:197,n:'Garlic Bulb',c:'Roots',p:20.52,u:'lb'},{id:199,n:'Garlic Fresh',c:'Roots',p:23.64,u:'lb'},
+  {id:206,n:'Potato Pink Fur Apple',c:'Roots',p:3.25,u:'lb'},{id:213,n:'Radish French Breakfast Baby',c:'Roots',p:12.79,u:'lb'},
+  {id:216,n:'Turmeric',c:'Roots',p:14.00,u:'lb'},{id:218,n:'Turnip Hakurei Mature',c:'Roots',p:7.95,u:'lb'},
+  {id:230,n:'Bean Fava',c:'Fruit and Veg',p:8.52,u:'lb'},{id:233,n:'Broccoli De Cicco',c:'Fruit and Veg',p:11.00,u:'lb'},
+  {id:235,n:'Brussels Sprouts',c:'Fruit and Veg',p:5.89,u:'lb'},{id:237,n:'Cabbage Caraflex',c:'Fruit and Veg',p:5.20,u:'lb'},
+  {id:238,n:'Cauliflower Head',c:'Fruit and Veg',p:4.59,u:'lb'},{id:244,n:'Corn',c:'Fruit and Veg',p:3.00,u:'lb'},
+  {id:245,n:'Cucumber Suyo Long Gherkin',c:'Fruit and Veg',p:11.00,u:'lb'},{id:248,n:'Eggplant Fairytale',c:'Fruit and Veg',p:3.06,u:'lb'},
+  {id:250,n:'Fennel Bulb',c:'Fruit and Veg',p:5.00,u:'lb'},{id:267,n:'Pea Beauregarde',c:'Fruit and Veg',p:8.67,u:'lb'},
+  {id:270,n:'Pepper Ahi Lemon',c:'Fruit and Veg',p:18.00,u:'lb'},{id:274,n:'Pepper Shishito',c:'Fruit and Veg',p:8.00,u:'lb'},
+  {id:283,n:'Squash Summer',c:'Fruit and Veg',p:4.00,u:'lb'},{id:285,n:'Strawberry Alpine',c:'Fruit and Veg',p:0.16,u:'pc'},
+  {id:287,n:'Tomato Dr Wych',c:'Fruit and Veg',p:5.50,u:'lb'},{id:288,n:'Tomato Sungold',c:'Fruit and Veg',p:7.75,u:'lb'},
+  {id:291,n:'Tomato Super Sweet Cherry',c:'Fruit and Veg',p:7.75,u:'lb'}
 ];
 
-// STATE
-let state = {
+var state = {
+  screen: 'entry',
   unit: null,
   isAdmin: false,
   availability: {},
@@ -180,375 +127,286 @@ let state = {
   historyUnit: 'All',
   adminTab: 'availability',
   adminCat: 'All',
-  openOrders: {},
+  openOrders: {}
 };
 
-// PERSIST
 function loadState() {
-  try {
-    const a = localStorage.getItem(STORAGE_KEY_AVAIL);
-    const o = localStorage.getItem(STORAGE_KEY_ORDERS);
-    if (a) state.availability = JSON.parse(a);
-    if (o) state.orders = JSON.parse(o);
-  } catch(e) {}
+  try { var a = localStorage.getItem('gpm_avail'); if(a) state.availability = JSON.parse(a); } catch(e){}
+  try { var o = localStorage.getItem('gpm_orders'); if(o) state.orders = JSON.parse(o); } catch(e){}
 }
-function saveAvail() { try { localStorage.setItem(STORAGE_KEY_AVAIL, JSON.stringify(state.availability)); } catch(e) {} }
-function saveOrders() { try { localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(state.orders)); } catch(e) {} }
+function saveAvail() { try { localStorage.setItem('gpm_avail', JSON.stringify(state.availability)); } catch(e){} }
+function saveOrders() { try { localStorage.setItem('gpm_orders', JSON.stringify(state.orders)); } catch(e){} }
 
-// UTILS
-const fmt = n => '$' + Number(n).toFixed(2);
-const el = id => document.getElementById(id);
-function weekKey(d){const dt=new Date(d),j=new Date(dt.getFullYear(),0,1),w=Math.ceil(((dt-j)/86400000+j.getDay()+1)/7);return dt.getFullYear()+'-W'+String(w).padStart(2,'0')}
-function monthKey(d){const dt=new Date(d);return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')}
+function fmt(n) { return '$' + Number(n).toFixed(2); }
+function el(id) { return document.getElementById(id); }
+function weekKey(d){var dt=new Date(d),j=new Date(dt.getFullYear(),0,1),w=Math.ceil(((dt-j)/86400000+j.getDay()+1)/7);return dt.getFullYear()+'-W'+String(w).padStart(2,'0')}
+function monthKey(d){var dt=new Date(d);return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')}
 function yearKey(d){return ''+new Date(d).getFullYear()}
 
 function showToast(msg) {
-  const t = $('toast');
+  var t = el('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
 }
 
-function showPage(id) {
-  var pages = ['page-entry','page-adminauth','page-admin','page-client','page-checkout','page-history'];
-  pages.forEach(function(p) {
-    var el = document.getElementById(p);
-    if (el) el.style.display = 'none';
-  });
-  var target = document.getElementById(id);
-  if (!target) return;
-  if (id === 'page-entry' || id === 'page-adminauth') {
-    target.style.display = 'flex';
+function render() {
+  var app = el('app');
+  if (state.screen === 'entry') { app.innerHTML = entryHTML(); }
+  else if (state.screen === 'adminauth') { app.innerHTML = adminAuthHTML(); }
+  else if (state.screen === 'admin') { app.innerHTML = navHTML() + adminHTML(); }
+  else if (state.screen === 'client') { app.innerHTML = navHTML() + clientHTML(); }
+  else if (state.screen === 'checkout') { app.innerHTML = navHTML() + checkoutHTML(); }
+  else if (state.screen === 'history') { app.innerHTML = navHTML() + historyHTML(); }
+}
+
+function go(screen) { state.screen = screen; render(); }
+
+function entryHTML() {
+  return '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center">' +
+    '<div style="margin-bottom:56px">' +
+    '<div style="font-family:Georgia,serif;font-size:48px;font-weight:300;letter-spacing:-1px">Garden</div>' +
+    '<div style="font-size:14px;letter-spacing:4px;color:var(--muted)">Pearl Morissette</div>' +
+    '<div style="font-size:12px;color:var(--muted);letter-spacing:1px;margin-top:4px">Jordan Station · Niagara</div>' +
+    '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px">' +
+    '<button style="background:var(--card);border:1px solid var(--border);color:var(--cream);padding:18px 24px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:inherit" onclick="selectUnit(\'Restaurant\')">Restaurant</button>' +
+    '<button style="background:var(--card);border:1px solid var(--border);color:var(--cream);padding:18px 24px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:inherit" onclick="selectUnit(\'Bakery\')">Bakery</button>' +
+    '<button style="background:none;border:none;color:var(--muted);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;font-family:inherit;margin-top:8px;padding:10px" onclick="go(\'adminauth\')">Garden Admin →</button>' +
+    '</div></div>';
+}
+
+function adminAuthHTML() {
+  return '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh">' +
+    '<div style="background:var(--card);border:1px solid var(--border);padding:40px 36px;width:100%;max-width:320px">' +
+    '<div class="pre">Garden Team</div>' +
+    '<div style="font-family:Georgia,serif;font-size:26px;font-weight:300;margin-bottom:28px">Admin Access</div>' +
+    '<label class="field-label">Passcode</label>' +
+    '<input class="field-input" type="password" id="admin-code" placeholder="........" onkeydown="if(event.key===\'Enter\')tryAdmin()">' +
+    '<div id="admin-err" style="color:#c44;font-size:12px;margin-bottom:12px;display:none">Incorrect passcode</div>' +
+    '<div style="display:flex;gap:10px;margin-top:8px">' +
+    '<button class="btn-primary" onclick="tryAdmin()">Enter</button>' +
+    '<button class="btn-secondary" onclick="go(\'entry\')">Back</button>' +
+    '</div></div></div>';
+}
+
+function tryAdmin() {
+  var code = el('admin-code') ? el('admin-code').value : '';
+  if (code === ADMIN_CODE) {
+    state.isAdmin = true;
+    state.adminTab = 'availability';
+    go('admin');
   } else {
-    target.style.display = 'block';
+    if (el('admin-err')) el('admin-err').style.display = 'block';
   }
-}
-
-function renderNav() {
-  const cc = Object.values(state.cart).reduce((s,q) => s+q, 0);
-  let html = '';
-  if (state.isAdmin) {
-    html = `
-      <button class="pill ${state.adminTab==='availability'?'active':''}" onclick="switchAdminTab('availability')">Availability</button>
-      <button class="pill ${state.adminTab==='history'?'active':''}" onclick="switchAdminTab('history')">Orders</button>`;
-  } else {
-    html = `
-      <span style="color:var(--muted);font-size:12px;letter-spacing:1px;margin-right:4px">${state.unit}</span>
-      <button class="pill active" onclick="renderClient();showPage('page-client')">Catalogue</button>
-      <button class="pill" onclick="renderHistory();showPage('page-history')">History</button>
-      <button class="pill ${cc>0?'cart-active':''}" onclick="renderCheckout();showPage('page-checkout')">Order${cc>0?' ('+cc+')':''}</button>`;
-  }
-  $('nav-right').innerHTML = html;
-}
-
-// ENTRY
-function goEntry() {
-  state.unit = null;
-  state.isAdmin = false;
-  state.cart = {};
-  $('main-nav').style.display = 'none';
-  showPage('page-entry');
 }
 
 function selectUnit(unit) {
   state.unit = unit;
   state.catFilter = 'All';
   state.search = '';
-  $('main-nav').style.display = 'flex';
-  renderNav();
-  renderClient();
-  showPage('page-client');
+  state.isAdmin = false;
+  go('client');
 }
 
-// ADMIN AUTH
-function goAdminAuth() {
-  $('admin-code').value = '';
-  $('admin-err').style.display = 'none';
-  showPage('page-adminauth');
-}
-
-function tryAdmin() {
-  if ($('admin-code').value === ADMIN_CODE) {
-    state.isAdmin = true;
-    state.adminTab = 'availability';
-    $('main-nav').style.display = 'flex';
-    renderNav();
-    renderAdminAvailability();
-    showPage('page-admin');
+function navHTML() {
+  var cc = Object.values(state.cart).reduce(function(s,q){ return s+q; }, 0);
+  var right = '';
+  if (state.isAdmin) {
+    right = '<button class="pill' + (state.adminTab==='availability'?' active':'') + '" onclick="state.adminTab=\'availability\';go(\'admin\')">Availability</button>' +
+      '<button class="pill' + (state.adminTab==='history'?' active':'') + '" onclick="state.adminTab=\'history\';go(\'admin\')">Orders</button>';
   } else {
-    $('admin-err').style.display = 'block';
+    right = '<span style="color:var(--muted);font-size:12px;letter-spacing:1px;margin-right:4px">' + state.unit + '</span>' +
+      '<button class="pill' + (state.screen==='client'?' active':'') + '" onclick="go(\'client\')">Catalogue</button>' +
+      '<button class="pill' + (state.screen==='history'?' active':'') + '" onclick="go(\'history\')">History</button>' +
+      '<button class="pill' + (cc>0?' cart-active':'') + '" onclick="go(\'checkout\')">Order' + (cc>0?' ('+cc+')':'') + '</button>';
   }
+  return '<nav><div class="logo" onclick="goEntry()"><div class="logo-top">GARDEN</div><div class="logo-sub">Pearl Morissette</div></div>' +
+    '<div class="nav-right">' + right + '</div></nav>';
 }
 
-// ADMIN AVAILABILITY
-function switchAdminTab(tab) {
-  state.adminTab = tab;
-  renderNav();
-  if (tab === 'availability') { renderAdminAvailability(); showPage('page-admin'); }
-  else { renderAdminHistory(); showPage('page-admin'); }
+function goEntry() {
+  state.unit = null;
+  state.isAdmin = false;
+  state.cart = {};
+  go('entry');
 }
 
-function renderAdminAvailability() {
-  const cats = ['All', ...new Set(PRODUCTS.map(p => p.c))];
-  const filtered = PRODUCTS.filter(p => state.adminCat === 'All' || p.c === state.adminCat);
-  const onCount = Object.values(state.availability).filter(v => v.on).length;
-
-  let html = `<div class="wrap">
-    <div class="pre">This Week</div>
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px">
-      <div class="h1" style="margin-bottom:0">Availability</div>
-      <div style="font-size:12px;color:var(--muted)">${onCount} of ${PRODUCTS.length} active</div>
-    </div>
-    <div class="filter-bar">${cats.map(c => `<button class="pill ${state.adminCat===c?'active':''}" onclick="state.adminCat='${c}';renderAdminAvailability()">${c}</button>`).join('')}</div>
-    <div style="display:grid;grid-template-columns:24px 1fr 200px 50px;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">
-      <div></div><div>Product</div><div>Note</div><div></div>
-    </div>`;
-
-  filtered.forEach(p => {
-    const av = state.availability[p.id] || {on:false,note:''};
-    html += `<div class="admin-row">
-      <div class="status-dot" style="background:${av.on?'var(--accent)':'var(--border)'}"></div>
-      <div>
-        <div style="font-size:13px">${p.n}</div>
-        <div style="font-size:11px;color:var(--muted)">${p.c} · ${fmt(p.p)}/${p.u}</div>
-      </div>
-      <input class="field-input" style="margin:0;opacity:${av.on?1:0.45};font-size:11px;padding:6px 10px"
-        placeholder="Note (optional)" value="${av.note||''}"
-        onchange="setNote(${p.id},this.value)">
-      <button class="toggle-btn ${av.on?'toggle-on':'toggle-off'}" onclick="toggleAvail(${p.id})">${av.on?'ON':'OFF'}</button>
-    </div>`;
+function adminHTML() {
+  if (state.adminTab === 'history') return adminHistoryHTML();
+  var cats = ['All'].concat(Array.from(new Set(PRODUCTS.map(function(p){ return p.c; }))));
+  var filtered = PRODUCTS.filter(function(p){ return state.adminCat==='All'||p.c===state.adminCat; });
+  var onCount = Object.values(state.availability).filter(function(v){ return v.on; }).length;
+  var html = '<div class="wrap"><div class="pre">This Week</div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px">' +
+    '<div class="h1" style="margin-bottom:0">Availability</div>' +
+    '<div style="font-size:12px;color:var(--muted)">' + onCount + ' of ' + PRODUCTS.length + ' active</div></div>' +
+    '<div class="filter-bar">' + cats.map(function(c){ return '<button class="pill' + (state.adminCat===c?' active':'') + '" onclick="state.adminCat=\'' + c + '\';go(\'admin\')">' + c + '</button>'; }).join('') + '</div>';
+  filtered.forEach(function(p) {
+    var av = state.availability[p.id] || {on:false,note:''};
+    html += '<div class="admin-row">' +
+      '<div class="dot" style="background:' + (av.on?'var(--accent)':'var(--border)') + '"></div>' +
+      '<div><div style="font-size:13px">' + p.n + '</div><div style="font-size:11px;color:var(--muted)">' + p.c + ' · ' + fmt(p.p) + '/' + p.u + '</div></div>' +
+      '<input class="field-input" style="margin:0;opacity:' + (av.on?1:0.45) + ';font-size:11px;padding:6px 10px" placeholder="Note" value="' + (av.note||'') + '" onchange="setNote(' + p.id + ',this.value)">' +
+      '<button class="tog ' + (av.on?'tog-on':'tog-off') + '" onclick="toggleAvail(' + p.id + ')">' + (av.on?'ON':'OFF') + '</button>' +
+      '</div>';
   });
-
-  $('page-admin').innerHTML = html + '</div>';
+  return html + '</div>';
 }
 
 function toggleAvail(id) {
-  const cur = state.availability[id] || {on:false,note:''};
-  state.availability[id] = {...cur, on: !cur.on};
+  var cur = state.availability[id] || {on:false,note:''};
+  state.availability[id] = {on:!cur.on, note:cur.note||''};
   saveAvail();
-  renderAdminAvailability();
+  go('admin');
 }
 
 function setNote(id, note) {
-  const cur = state.availability[id] || {on:false,note:''};
-  state.availability[id] = {...cur, note};
+  var cur = state.availability[id] || {on:false,note:''};
+  state.availability[id] = {on:cur.on, note:note};
   saveAvail();
 }
 
-// ADMIN HISTORY
-function renderAdminHistory() {
-  const rpmLife = state.orders.filter(o=>o.unit==='Restaurant').reduce((s,o)=>s+o.total,0);
-  const bakLife = state.orders.filter(o=>o.unit==='Bakery').reduce((s,o)=>s+o.total,0);
-  const lifetime = state.orders.reduce((s,o)=>s+o.total,0);
-
-  const filtered = state.orders.filter(o => {
-    const now = new Date();
-    if (state.historyUnit !== 'All' && o.unit !== state.historyUnit) return false;
-    if (state.historyFilter === 'week') return weekKey(o.date) === weekKey(now);
-    if (state.historyFilter === 'month') return monthKey(o.date) === monthKey(now);
-    if (state.historyFilter === 'year') return yearKey(o.date) === yearKey(now);
+function adminHistoryHTML() {
+  var rpmLife = state.orders.filter(function(o){return o.unit==='Restaurant';}).reduce(function(s,o){return s+o.total;},0);
+  var bakLife = state.orders.filter(function(o){return o.unit==='Bakery';}).reduce(function(s,o){return s+o.total;},0);
+  var lifetime = state.orders.reduce(function(s,o){return s+o.total;},0);
+  var filtered = state.orders.filter(function(o){
+    var now = new Date();
+    if (state.historyUnit!=='All'&&o.unit!==state.historyUnit) return false;
+    if (state.historyFilter==='week') return weekKey(o.date)===weekKey(now);
+    if (state.historyFilter==='month') return monthKey(o.date)===monthKey(now);
+    if (state.historyFilter==='year') return yearKey(o.date)===yearKey(now);
     return true;
   });
-  const periodSpend = filtered.reduce((s,o)=>s+o.total,0);
-
-  let html = `<div class="wrap-md">
-    <div class="pre">Garden Admin</div>
-    <div class="h1">Order History</div>
-    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
-      <div class="stat-card"><div class="stat-label">Total Lifetime</div><div class="stat-value">${fmt(lifetime)}</div></div>
-      <div class="stat-card"><div class="stat-label">Restaurant</div><div class="stat-value">${fmt(rpmLife)}</div></div>
-      <div class="stat-card"><div class="stat-label">Bakery</div><div class="stat-value">${fmt(bakLife)}</div></div>
-    </div>
-    <div class="filter-bar">
-      ${[['all','All Time'],['week','This Week'],['month','This Month'],['year','This Year']].map(([k,l])=>`<button class="pill ${state.historyFilter===k?'active':''}" onclick="state.historyFilter='${k}';renderAdminHistory()">${l}</button>`).join('')}
-    </div>
-    <div class="filter-bar">
-      ${['All','Restaurant','Bakery'].map(u=>`<button class="pill ${state.historyUnit===u?'active':''}" onclick="state.historyUnit='${u}';renderAdminHistory()">${u}</button>`).join('')}
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:12px;color:var(--muted)">
-      <span>${filtered.length} order${filtered.length!==1?'s':''}</span>
-      <span style="font-family:Georgia,serif;font-size:16px;color:var(--cream)">${fmt(periodSpend)}</span>
-    </div>`;
-
-  if (!filtered.length) {
-    html += '<div class="empty">No orders in this period.</div>';
-  } else {
-    filtered.forEach(o => { html += orderCardHTML(o, true); });
-  }
-
-  $('page-admin').innerHTML = html + '</div>';
+  var periodSpend = filtered.reduce(function(s,o){return s+o.total;},0);
+  var html = '<div class="wrap-md"><div class="pre">Garden Admin</div><div class="h1">Order History</div>' +
+    '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">' +
+    '<div class="stat-card"><div class="stat-label">Total Lifetime</div><div class="stat-value">' + fmt(lifetime) + '</div></div>' +
+    '<div class="stat-card"><div class="stat-label">Restaurant</div><div class="stat-value">' + fmt(rpmLife) + '</div></div>' +
+    '<div class="stat-card"><div class="stat-label">Bakery</div><div class="stat-value">' + fmt(bakLife) + '</div></div></div>' +
+    '<div class="filter-bar">' + [['all','All Time'],['week','This Week'],['month','This Month'],['year','This Year']].map(function(x){ return '<button class="pill' + (state.historyFilter===x[0]?' active':'') + '" onclick="state.historyFilter=\'' + x[0] + '\';go(\'admin\')">' + x[1] + '</button>'; }).join('') + '</div>' +
+    '<div class="filter-bar">' + ['All','Restaurant','Bakery'].map(function(u){ return '<button class="pill' + (state.historyUnit===u?' active':'') + '" onclick="state.historyUnit=\'' + u + '\';go(\'admin\')">' + u + '</button>'; }).join('') + '</div>' +
+    '<div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:12px;color:var(--muted)"><span>' + filtered.length + ' orders</span><span style="font-family:Georgia,serif;font-size:16px;color:var(--cream)">' + fmt(periodSpend) + '</span></div>';
+  if (!filtered.length) { html += '<div class="empty">No orders in this period.</div>'; }
+  else { filtered.forEach(function(o){ html += orderCardHTML(o, true, 'admin'); }); }
+  return html + '</div>';
 }
 
-// CLIENT CATALOGUE
-function renderClient() {
-  const available = PRODUCTS.filter(p => state.availability[p.id]?.on);
-  const cats = ['All', ...new Set(available.map(p => p.c))];
-  if (state.catFilter !== 'All' && !cats.includes(state.catFilter)) state.catFilter = 'All';
-  const filtered = available.filter(p => {
-    if (state.catFilter !== 'All' && p.c !== state.catFilter) return false;
-    if (state.search && !p.n.toLowerCase().includes(state.search.toLowerCase())) return false;
+function clientHTML() {
+  var available = PRODUCTS.filter(function(p){ return state.availability[p.id]&&state.availability[p.id].on; });
+  var cats = ['All'].concat(Array.from(new Set(available.map(function(p){ return p.c; }))));
+  if (state.catFilter!=='All'&&cats.indexOf(state.catFilter)<0) state.catFilter='All';
+  var filtered = available.filter(function(p){
+    if (state.catFilter!=='All'&&p.c!==state.catFilter) return false;
+    if (state.search&&p.n.toLowerCase().indexOf(state.search.toLowerCase())<0) return false;
     return true;
   });
-  const weekStr = new Date().toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'});
-
-  let html = `<div class="wrap">
-    <div class="pre">Week of ${weekStr}</div>
-    <div class="h1">This Week's Harvest</div>`;
-
+  var weekStr = new Date().toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'});
+  var html = '<div class="wrap"><div class="pre">Week of ' + weekStr + '</div><div class="h1">This Week\'s Harvest</div>';
   if (!available.length) {
-    html += '<div class="empty"><div class="empty-title">Nothing listed yet</div><p>The garden team hasn\'t set this week\'s availability.</p></div>';
+    html += '<div class="empty"><div class="empty-title">Nothing listed yet</div><p>The garden team has not set this week\'s availability.</p></div>';
   } else {
-    html += `
-      <input class="search-input" placeholder="Search…" value="${state.search}" oninput="state.search=this.value;renderClient()">
-      <div class="filter-bar">${cats.map(c=>`<button class="pill ${state.catFilter===c?'active':''}" onclick="state.catFilter='${c}';renderClient()">${c}</button>`).join('')}</div>
-      <div class="table-header product-grid"><div>Product</div><div style="text-align:right">Price</div><div style="text-align:right">Unit</div><div style="text-align:right">Qty</div></div>`;
-
-    filtered.forEach(p => {
-      const av = state.availability[p.id];
-      const qty = state.cart[p.id] || 0;
-      html += `<div class="table-row product-row ${qty>0?'row-selected':''}">
-        <div>
-          <div class="p-name">${p.n}</div>
-          ${av?.note?`<div class="p-note">${av.note}</div>`:''}
-          <div class="p-cat">${p.c}</div>
-        </div>
-        <div class="p-price">${fmt(p.p)}</div>
-        <div class="p-unit">${p.u}</div>
-        <div class="qty-ctrl">
-          ${qty>0?`<button class="qty-btn" onclick="updateCart(${p.id},-1)">−</button><span class="qty-num">${qty}</span>`:''}
-          <button class="qty-btn ${qty>0?'active':''}" onclick="updateCart(${p.id},1)">+</button>
-        </div>
-      </div>`;
+    html += '<input class="search-input" placeholder="Search..." value="' + state.search + '" oninput="state.search=this.value;go(\'client\')">' +
+      '<div class="filter-bar">' + cats.map(function(c){ return '<button class="pill' + (state.catFilter===c?' active':'') + '" onclick="state.catFilter=\'' + c + '\';go(\'client\')">' + c + '</button>'; }).join('') + '</div>' +
+      '<div class="table-header product-grid"><div>Product</div><div style="text-align:right">Price</div><div style="text-align:right">Unit</div><div style="text-align:right">Qty</div></div>';
+    filtered.forEach(function(p) {
+      var av = state.availability[p.id];
+      var qty = state.cart[p.id]||0;
+      html += '<div class="table-row product-row' + (qty>0?' row-sel':'') + '">' +
+        '<div><div class="p-name">' + p.n + '</div>' + (av&&av.note?'<div class="p-note">'+av.note+'</div>':'') + '<div class="p-cat">' + p.c + '</div></div>' +
+        '<div class="p-price">' + fmt(p.p) + '</div>' +
+        '<div class="p-unit">' + p.u + '</div>' +
+        '<div class="qty-ctrl">' + (qty>0?'<button class="qty-btn" onclick="updateCart('+p.id+',-1)">-</button><span class="qty-num">'+qty+'</span>':'') +
+        '<button class="qty-btn' + (qty>0?' on':'') + '" onclick="updateCart(' + p.id + ',1)">+</button></div></div>';
     });
-    html += `<div style="padding:16px 0;color:var(--muted);font-size:12px">${filtered.length} products shown</div>`;
+    html += '<div style="padding:16px 0;color:var(--muted);font-size:12px">' + filtered.length + ' products shown</div>';
   }
-
-  $('page-client').innerHTML = html + '</div>';
-  renderNav();
+  return html + '</div>';
 }
 
 function updateCart(id, delta) {
-  const n = Math.max(0, (state.cart[id]||0) + delta);
-  if (n === 0) delete state.cart[id]; else state.cart[id] = n;
-  renderClient();
+  var n = Math.max(0, (state.cart[id]||0) + delta);
+  if (n===0) delete state.cart[id]; else state.cart[id]=n;
+  go('client');
 }
 
-// CHECKOUT
-function renderCheckout() {
-  const items = Object.entries(state.cart).filter(([,q])=>q>0).map(([id,qty])=>{
-    const p = PRODUCTS.find(p=>p.id===Number(id));
-    return {...p,qty};
+function checkoutHTML() {
+  var items = Object.entries(state.cart).filter(function(e){return e[1]>0;}).map(function(e){
+    var p = PRODUCTS.find(function(p){return p.id===Number(e[0]);});
+    return {id:p.id,n:p.n,p:p.p,u:p.u,qty:e[1]};
   });
-  const total = items.reduce((s,i)=>s+i.p*i.qty,0);
-
-  let html = `<div class="wrap-sm">
-    <div class="pre">${state.unit}</div>
-    <div class="h1">Your Order</div>`;
-
+  var total = items.reduce(function(s,i){return s+i.p*i.qty;},0);
+  var html = '<div class="wrap-sm"><div class="pre">' + state.unit + '</div><div class="h1">Your Order</div>';
   if (!items.length) {
-    html += `<div class="empty"><div class="empty-title">Nothing added yet</div><button class="btn-primary" style="margin-top:16px" onclick="renderClient();showPage('page-client')">Browse Catalogue</button></div>`;
+    html += '<div class="empty"><div class="empty-title">Nothing added yet</div><button class="btn-primary" style="margin-top:16px" onclick="go(\'client\')">Browse Catalogue</button></div>';
   } else {
-    html += `<div class="table-header" style="grid-template-columns:1fr 90px 80px 80px"><div>Item</div><div style="text-align:center">Qty</div><div style="text-align:right">Unit</div><div style="text-align:right">Total</div></div>`;
-    items.forEach(i => {
-      html += `<div class="table-row checkout-row">
-        <div style="font-size:13px">${i.n}</div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:6px">
-          <button class="qty-btn" onclick="updateCart(${i.id},-1);renderCheckout()">−</button>
-          <span class="qty-num">${i.qty}</span>
-          <button class="qty-btn" onclick="updateCart(${i.id},1);renderCheckout()">+</button>
-        </div>
-        <div style="text-align:right;font-size:11px;color:var(--muted)">${i.qty} ${i.u}</div>
-        <div style="text-align:right;font-family:Georgia,serif;font-size:15px">${fmt(i.p*i.qty)}</div>
-      </div>`;
+    html += '<div class="table-header" style="grid-template-columns:1fr 90px 80px 80px"><div>Item</div><div style="text-align:center">Qty</div><div style="text-align:right">Unit</div><div style="text-align:right">Total</div></div>';
+    items.forEach(function(i) {
+      html += '<div class="table-row checkout-row">' +
+        '<div style="font-size:13px">' + i.n + '</div>' +
+        '<div style="display:flex;align-items:center;justify-content:center;gap:6px"><button class="qty-btn" onclick="updateCart('+i.id+',-1);go(\'checkout\')">-</button><span class="qty-num">'+i.qty+'</span><button class="qty-btn" onclick="updateCart('+i.id+',1);go(\'checkout\')">+</button></div>' +
+        '<div style="text-align:right;font-size:11px;color:var(--muted)">' + i.qty + ' ' + i.u + '</div>' +
+        '<div style="text-align:right;font-family:Georgia,serif;font-size:15px">' + fmt(i.p*i.qty) + '</div></div>';
     });
-    html += `
-      <div class="total-bar">
-        <span style="color:var(--muted);font-size:12px">Order Total</span>
-        <span style="font-family:Georgia,serif;font-size:28px;font-weight:300">${fmt(total)}</span>
-      </div>
-      <label class="field-label">Note to Garden (optional)</label>
-      <textarea class="field-textarea" id="order-note" placeholder="Timing, substitutions, or anything else…"></textarea>
-      <button class="btn-primary btn-full" style="margin-top:16px" onclick="submitOrder()">Submit Order</button>`;
+    html += '<div class="total-bar"><span style="color:var(--muted);font-size:12px">Order Total</span><span style="font-family:Georgia,serif;font-size:28px;font-weight:300">' + fmt(total) + '</span></div>' +
+      '<label class="field-label">Note to Garden (optional)</label>' +
+      '<textarea class="field-textarea" id="order-note" placeholder="Timing, substitutions..."></textarea>' +
+      '<button class="btn-primary btn-full" style="margin-top:16px" onclick="submitOrder()">Submit Order</button>';
   }
-
-  $('page-checkout').innerHTML = html + '</div>';
-  renderNav();
+  return html + '</div>';
 }
 
 function submitOrder() {
-  const items = Object.entries(state.cart).filter(([,q])=>q>0).map(([id,qty])=>{
-    const p = PRODUCTS.find(p=>p.id===Number(id));
-    return {id:p.id,name:p.n,qty,unit:p.u,price:p.p,subtotal:p.p*qty};
+  var items = Object.entries(state.cart).filter(function(e){return e[1]>0;}).map(function(e){
+    var p = PRODUCTS.find(function(p){return p.id===Number(e[0]);});
+    return {id:p.id,name:p.n,qty:e[1],unit:p.u,price:p.p,subtotal:p.p*e[1]};
   });
-  const total = items.reduce((s,i)=>s+i.subtotal,0);
-  const note = $('order-note')?.value||'';
-  const order = {id:Date.now(),unit:state.unit,date:new Date().toISOString(),items,total,note};
-  state.orders.unshift(order);
+  var total = items.reduce(function(s,i){return s+i.subtotal;},0);
+  var note = el('order-note')?el('order-note').value:'';
+  state.orders.unshift({id:Date.now(),unit:state.unit,date:new Date().toISOString(),items:items,total:total,note:note});
   saveOrders();
   state.cart = {};
   showToast('Order submitted');
-  renderClient();
-  showPage('page-client');
+  go('client');
 }
 
-// CLIENT HISTORY
-function renderHistory() {
-  const myOrders = state.orders.filter(o=>o.unit===state.unit);
-  const filtered = myOrders.filter(o => {
-    const now = new Date();
-    if (state.historyFilter === 'week') return weekKey(o.date)===weekKey(now);
-    if (state.historyFilter === 'month') return monthKey(o.date)===monthKey(now);
-    if (state.historyFilter === 'year') return yearKey(o.date)===yearKey(now);
+function historyHTML() {
+  var myOrders = state.orders.filter(function(o){return o.unit===state.unit;});
+  var filtered = myOrders.filter(function(o){
+    var now = new Date();
+    if (state.historyFilter==='week') return weekKey(o.date)===weekKey(now);
+    if (state.historyFilter==='month') return monthKey(o.date)===monthKey(now);
+    if (state.historyFilter==='year') return yearKey(o.date)===yearKey(now);
     return true;
   });
-  const lifetime = myOrders.reduce((s,o)=>s+o.total,0);
-  const periodSpend = filtered.reduce((s,o)=>s+o.total,0);
-
-  let html = `<div class="wrap-md">
-    <div class="pre">${state.unit}</div>
-    <div class="h1">Order History</div>
-    <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
-      <div class="stat-card"><div class="stat-label">Lifetime Spend</div><div class="stat-value">${fmt(lifetime)}</div></div>
-      <div class="stat-card"><div class="stat-label">This Period</div><div class="stat-value">${fmt(periodSpend)}</div><div class="stat-sub">${filtered.length} order${filtered.length!==1?'s':''}</div></div>
-    </div>
-    <div class="filter-bar">
-      ${[['all','All Time'],['week','This Week'],['month','This Month'],['year','This Year']].map(([k,l])=>`<button class="pill ${state.historyFilter===k?'active':''}" onclick="state.historyFilter='${k}';renderHistory()">${l}</button>`).join('')}
-    </div>`;
-
-  if (!filtered.length) {
-    html += '<div class="empty">No orders in this period.</div>';
-  } else {
-    filtered.forEach(o => { html += orderCardHTML(o, false); });
-  }
-
-  $('page-history').innerHTML = html + '</div>';
-  renderNav();
+  var lifetime = myOrders.reduce(function(s,o){return s+o.total;},0);
+  var periodSpend = filtered.reduce(function(s,o){return s+o.total;},0);
+  var html = '<div class="wrap-md"><div class="pre">' + state.unit + '</div><div class="h1">Order History</div>' +
+    '<div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">' +
+    '<div class="stat-card"><div class="stat-label">Lifetime Spend</div><div class="stat-value">' + fmt(lifetime) + '</div></div>' +
+    '<div class="stat-card"><div class="stat-label">This Period</div><div class="stat-value">' + fmt(periodSpend) + '</div><div class="stat-sub">' + filtered.length + ' orders</div></div></div>' +
+    '<div class="filter-bar">' + [['all','All Time'],['week','This Week'],['month','This Month'],['year','This Year']].map(function(x){ return '<button class="pill' + (state.historyFilter===x[0]?' active':'') + '" onclick="state.historyFilter=\'' + x[0] + '\';go(\'history\')">' + x[1] + '</button>'; }).join('') + '</div>';
+  if (!filtered.length) { html += '<div class="empty">No orders in this period.</div>'; }
+  else { filtered.forEach(function(o){ html += orderCardHTML(o, false, 'history'); }); }
+  return html + '</div>';
 }
 
-// ORDER CARD
-function orderCardHTML(o, showUnit) {
-  const ds = new Date(o.date).toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
-  const open = state.openOrders[o.id];
-  const toggleFn = showUnit ? 'renderAdminHistory' : 'renderHistory';
-  return `<div class="order-card">
-    <div class="order-card-header" onclick="state.openOrders[${o.id}]=!state.openOrders[${o.id}];${toggleFn}()">
-      <div>
-        <div style="font-size:13px">${ds}${showUnit?` <span style="font-size:11px;color:var(--accent);margin-left:8px">${o.unit}</span>`:''}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${o.items.length} item${o.items.length!==1?'s':''}</div>
-      </div>
-      <div style="font-family:Georgia,serif;font-size:16px;text-align:right">${fmt(o.total)}</div>
-      <div style="text-align:right;font-size:11px;color:var(--muted)">${open?'▲':'▼'}</div>
-    </div>
-    ${open?`<div class="order-detail">
-      ${o.items.map(i=>`<div class="order-detail-row"><span>${i.name}</span><span style="color:var(--muted)">${i.qty} ${i.unit} · ${fmt(i.subtotal)}</span></div>`).join('')}
-      ${o.note?`<div class="order-note">"${o.note}"</div>`:''}
-    </div>`:''}
-  </div>`;
+function orderCardHTML(o, showUnit, screen) {
+  var ds = new Date(o.date).toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  var open = state.openOrders[o.id];
+  return '<div class="order-card">' +
+    '<div class="order-head" onclick="state.openOrders[' + o.id + ']=!state.openOrders[' + o.id + '];go(\'' + screen + '\')">' +
+    '<div><div style="font-size:13px">' + ds + (showUnit?' <span style="font-size:11px;color:var(--accent);margin-left:8px">'+o.unit+'</span>':'') + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + o.items.length + ' items</div></div>' +
+    '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">' + fmt(o.total) + '</div>' +
+    '<div style="text-align:right;font-size:11px;color:var(--muted)">' + (open?'▲':'▼') + '</div></div>' +
+    (open?'<div class="order-detail">' + o.items.map(function(i){ return '<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>'; }).join('') + (o.note?'<div class="order-note">'+o.note+'</div>':'') + '</div>':'') +
+    '</div>';
 }
 
-// INIT
 loadState();
-showPage('page-entry');
+render();
 </script>
 </body>
 </html>
