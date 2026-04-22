@@ -380,7 +380,7 @@ function submitOrder(){
   });
   var total=items.reduce(function(s,i){return s+i.subtotal},0);
   var note=document.getElementById("order-note")?document.getElementById("order-note").value:"";
-  apiPost("submitOrder", {unit:state.unit,date:new Date().toISOString(),items:items,total:total,note:note}).then(function(){
+  apiWrite("submitOrder",{data:encodeURIComponent(JSON.stringify({unit:state.unit,date:new Date().toISOString(),items:items,total:total,note:note}))}).then(function(){
     state.cart={};showToast("Order submitted");go("client");
   }).catch(function(){showToast("Error — try again")});
 }
