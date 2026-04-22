@@ -112,9 +112,9 @@ function showToast(msg){var t=document.getElementById("toast");t.textContent=msg
 function apiGet(action,extra){
   return fetch(API+"?action="+action+(extra||"")).then(function(r){return r.json()})
 }
-function apiPost(data){
-  var encoded=encodeURIComponent(JSON.stringify(data));
-  return fetch(API+"?payload="+encoded).then(function(r){return r.json()})
+function apiPost(action, data){
+  var url = API + "?action=" + action + "&data=" + encodeURIComponent(JSON.stringify(data));
+  return fetch(url).then(function(r){return r.json()});
 }
 
 function render(){
@@ -243,7 +243,7 @@ function toggleAvail(id){
   var cur=state.availability[String(id)]||{on:false,note:""};
   state.availability[String(id)]={on:!cur.on,note:cur.note||""};
   var payload={};payload[id]=state.availability[String(id)];
-  apiPost({action:"setAvailability",availability:payload});
+  apiPost("setAvailability", payload);
   go("admin");
 }
 
@@ -380,7 +380,7 @@ function submitOrder(){
   });
   var total=items.reduce(function(s,i){return s+i.subtotal},0);
   var note=document.getElementById("order-note")?document.getElementById("order-note").value:"";
-  apiPost({action:"submitOrder",order:{unit:state.unit,date:new Date().toISOString(),items:items,total:total,note:note}}).then(function(){
+  apiPost("submitOrder", {unit:state.unit,date:new Date().toISOString(),items:items,total:total,note:note}).then(function(){
     state.cart={};showToast("Order submitted");go("client");
   }).catch(function(){showToast("Error — try again")});
 }
