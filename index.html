@@ -47,11 +47,6 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .qty-btn.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
 .qty-num{font-size:13px;min-width:16px;text-align:center}
 .row-sel{background:#161510}
-.admin-row{display:grid;grid-template-columns:24px 1fr 200px 50px;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center}
-.dot{width:10px;height:10px;border-radius:50%;margin:0 auto}
-.tog{font-size:10px;font-weight:700;width:48px;padding:6px 0;border:1px solid;text-align:center}
-.tog-on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
-.tog-off{background:transparent;color:var(--muted);border-color:var(--border)}
 .checkout-row{display:grid;grid-template-columns:1fr 90px 80px 80px;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center}
 .total-bar{border-top:1px solid var(--accent);padding-top:20px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
 .stat-grid{display:grid;gap:1px;margin-bottom:40px}
@@ -71,7 +66,6 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){
   .product-grid,.product-row{grid-template-columns:1fr 70px 50px 70px}
-  .admin-row{grid-template-columns:16px 1fr 100px 48px;gap:8px;padding:8px}
   .checkout-row{grid-template-columns:1fr 70px 70px 70px}
   nav{padding:12px 16px}
   .wrap,.wrap-sm,.wrap-md{padding:28px 16px}
@@ -82,13 +76,12 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 <div id="toast"></div>
 <div id="app"></div>
 <script>
-var API = "https://script.google.com/macros/s/AKfycbwkh33hUrI2O6aa-MGkL8UN8ZHgr6TYN7A-HW15frdY-fRPFtHyuqTQCUVKYEn0HNbAig/exec";
-var ADMIN_CODE = "garden2024";
+var API = "https://garden-pm-proxy-0a2d338d45e9.herokuapp.com";
+var UNIT_KEY = "gpm_unit";
 
 var state = {
   screen: "entry",
   unit: null,
-  isAdmin: false,
   products: [],
   availability: {},
   cart: {},
@@ -96,9 +89,6 @@ var state = {
   search: "",
   catFilter: "All",
   historyFilter: "all",
-  historyUnit: "All",
-  adminTab: "availability",
-  adminCat: "All",
   openOrders: {}
 };
 
@@ -114,32 +104,13 @@ function showToast(msg){
   setTimeout(function(){t.classList.remove("show")},2500);
 }
 
-// JSONP for write operations — bypasses CORS
-function jsonp(url){
-  return new Promise(function(resolve){
-    var cb="cb"+Date.now();
-    window[cb]=function(data){
-      resolve(data);
-      delete window[cb];
-      if(script.parentNode) script.parentNode.removeChild(script);
-    };
-    var script=document.createElement("script");
-    script.src=url+"&callback="+cb;
-    script.onerror=function(){resolve({error:"network error"})};
-    document.head.appendChild(script);
-  });
-}
-
-// GET for read operations
-function apiGet(action,extra){
-  return fetch(API+"?action="+action+(extra||"")).then(function(r){return r.json()});
+function api(params){
+  return fetch(API+"?"+params).then(function(r){return r.json()});
 }
 
 function render(){
   var app=document.getElementById("app");
   if(state.screen==="entry") app.innerHTML=entryHTML();
-  else if(state.screen==="adminauth") app.innerHTML=adminAuthHTML();
-  else if(state.screen==="admin") app.innerHTML=navHTML()+adminHTML();
   else if(state.screen==="client") app.innerHTML=navHTML()+clientHTML();
   else if(state.screen==="checkout") app.innerHTML=navHTML()+checkoutHTML();
   else if(state.screen==="history") app.innerHTML=navHTML()+historyHTML();
@@ -162,165 +133,49 @@ function entryHTML(){
     '<div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px">'+
     '<button style="background:var(--card);border:1px solid var(--border);color:var(--cream);padding:18px 24px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:inherit" onclick="selectUnit(\'Restaurant\')">Restaurant</button>'+
     '<button style="background:var(--card);border:1px solid var(--border);color:var(--cream);padding:18px 24px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:inherit" onclick="selectUnit(\'Bakery\')">Bakery</button>'+
-    '<button style="background:none;border:none;color:var(--muted);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;font-family:inherit;margin-top:8px;padding:10px" onclick="go(\'adminauth\')">Garden Admin →</button>'+
     '</div></div>';
-}
-
-function adminAuthHTML(){
-  return '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh">'+
-    '<div style="background:var(--card);border:1px solid var(--border);padding:40px 36px;width:100%;max-width:320px">'+
-    '<div class="pre">Garden Team</div>'+
-    '<div style="font-family:Georgia,serif;font-size:26px;font-weight:300;margin-bottom:28px">Admin Access</div>'+
-    '<label class="field-label">Passcode</label>'+
-    '<input class="field-input" type="password" id="admin-code" placeholder="........" onkeydown="if(event.key===\'Enter\')tryAdmin()">'+
-    '<div id="admin-err" style="color:#c44;font-size:12px;margin-bottom:12px;display:none">Incorrect passcode</div>'+
-    '<div style="display:flex;gap:10px;margin-top:8px">'+
-    '<button class="btn-primary" onclick="tryAdmin()">Enter</button>'+
-    '<button class="btn-secondary" onclick="go(\'entry\')">Back</button>'+
-    '</div></div></div>';
-}
-
-function tryAdmin(){
-  var code=document.getElementById("admin-code")?document.getElementById("admin-code").value:"";
-  if(code===ADMIN_CODE){
-    state.isAdmin=true;
-    state.adminTab="availability";
-    showLoading("Loading...");
-    Promise.all([loadProducts(),loadAvailability(),loadOrders("All")]).then(function(){go("admin")});
-  } else {
-    var err=document.getElementById("admin-err");
-    if(err) err.style.display="block";
-  }
 }
 
 function selectUnit(unit){
   state.unit=unit;
+  try{localStorage.setItem(UNIT_KEY,unit)}catch(e){}
   state.catFilter="All";
   state.search="";
-  state.isAdmin=false;
   showLoading("Loading this week...");
   Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
 }
 
 function loadProducts(){
-  return apiGet("getProducts").then(function(data){
+  return api("action=getProducts").then(function(data){
     if(data.products) state.products=data.products;
-  }).catch(function(e){console.error("loadProducts",e)});
+  });
 }
 
 function loadAvailability(){
-  return apiGet("getAvailability").then(function(data){
+  return api("action=getAvailability").then(function(data){
     if(data.availability) state.availability=data.availability;
-  }).catch(function(e){console.error("loadAvailability",e)});
+  });
 }
 
-function loadOrders(unit){
-  return apiGet("getOrders","&unit="+(unit||"All")).then(function(data){
+function loadOrders(){
+  return api("action=getOrders&unit="+state.unit).then(function(data){
     if(data.orders) state.orders=data.orders;
-  }).catch(function(e){console.error("loadOrders",e)});
+  });
 }
-
-function goEntry(){state.unit=null;state.isAdmin=false;state.cart={};go("entry")}
 
 function navHTML(){
   var cc=Object.values(state.cart).reduce(function(s,q){return s+q},0);
-  var right="";
-  if(state.isAdmin){
-    right='<button class="pill'+(state.adminTab==="availability"?" active":"")+'" onclick="state.adminTab=\'availability\';go(\'admin\')">Availability</button>'+
-      '<button class="pill'+(state.adminTab==="history"?" active":"")+'" onclick="state.adminTab=\'history\';loadOrders(\'All\').then(function(){go(\'admin\')})">Orders</button>';
-  } else {
-    right='<span style="color:var(--muted);font-size:12px;letter-spacing:1px;margin-right:4px">'+state.unit+'</span>'+
-      '<button class="pill'+(state.screen==="client"?" active":"")+'" onclick="go(\'client\')">Catalogue</button>'+
-      '<button class="pill'+(state.screen==="history"?" active":"")+'" onclick="loadOrders(\''+state.unit+'\').then(function(){go(\'history\')})">History</button>'+
-      '<button class="pill'+(cc>0?" cart-active":"")+'" onclick="go(\'checkout\')">Order'+(cc>0?" ("+cc+")":"")+' </button>';
-  }
-  return '<nav><div class="logo" onclick="goEntry()">'+
+  return '<nav>'+
+    '<div class="logo" onclick="go(\'entry\')">'+
     '<div class="logo-top">GARDEN</div>'+
     '<div class="logo-sub">Pearl Morissette</div>'+
-    '</div><div class="nav-right">'+right+'</div></nav>';
-}
-
-function adminHTML(){
-  if(state.adminTab==="history") return adminHistoryHTML();
-  var cats=["All"].concat(Array.from(new Set(state.products.map(function(p){return p.category}))));
-  var filtered=state.products.filter(function(p){return state.adminCat==="All"||p.category===state.adminCat});
-  var onCount=Object.values(state.availability).filter(function(v){return v.on}).length;
-  var html='<div class="wrap"><div class="pre">This Week</div>'+
-    '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px">'+
-    '<div class="h1" style="margin-bottom:0">Availability</div>'+
-    '<div style="font-size:12px;color:var(--muted)">'+onCount+" of "+state.products.length+" active</div></div>"+
-    '<div class="filter-bar">'+
-    cats.map(function(c){
-      return '<button class="pill'+(state.adminCat===c?" active":"")+'" onclick="state.adminCat=\''+c+'\';go(\'admin\')">'+c+"</button>";
-    }).join("")+
-    "</div>"+
-    '<div style="display:grid;grid-template-columns:24px 1fr 200px 50px;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">'+
-    '<div></div><div>Product</div><div>Note</div><div></div></div>';
-
-  filtered.forEach(function(p){
-    var av=state.availability[String(p.id)]||{on:false,note:""};
-    html+='<div class="admin-row">'+
-      '<div class="dot" style="background:'+(av.on?"var(--accent)":"var(--border)")+'"></div>'+
-      '<div>'+
-      '<div style="font-size:13px">'+p.name+'</div>'+
-      '<div style="font-size:11px;color:var(--muted)">'+p.category+" · "+fmt(p.price)+"/"+p.unit+'</div>'+
-      '</div>'+
-      '<input class="field-input" style="margin:0;opacity:'+(av.on?1:0.45)+';font-size:11px;padding:6px 10px" '+
-      'placeholder="Note" value="'+(av.note||"")+'" onchange="setNote('+p.id+',this.value)">'+
-      '<button class="tog '+(av.on?"tog-on":"tog-off")+'" onclick="toggleAvail('+p.id+')">'+(av.on?"ON":"OFF")+"</button>"+
-      "</div>";
-  });
-  return html+"</div>";
-}
-
-function toggleAvail(id){
-  var cur=state.availability[String(id)]||{on:false,note:""};
-  var newOn=!cur.on;
-  state.availability[String(id)]={on:newOn,note:cur.note||""};
-  var url=API+"?action=setOne&id="+id+"&on="+newOn+"&note="+encodeURIComponent(cur.note||"");
-  jsonp(url).then(function(r){console.log("toggleAvail",r)});
-  go("admin");
-}
-
-function setNote(id,note){
-  var cur=state.availability[String(id)]||{on:false,note:""};
-  state.availability[String(id)]={on:cur.on,note:note};
-  var url=API+"?action=setOne&id="+id+"&on="+cur.on+"&note="+encodeURIComponent(note);
-  jsonp(url).then(function(r){console.log("setNote",r)});
-}
-
-function adminHistoryHTML(){
-  var rpmLife=state.orders.filter(function(o){return o.unit==="Restaurant"}).reduce(function(s,o){return s+o.total},0);
-  var bakLife=state.orders.filter(function(o){return o.unit==="Bakery"}).reduce(function(s,o){return s+o.total},0);
-  var lifetime=state.orders.reduce(function(s,o){return s+o.total},0);
-  var filtered=state.orders.filter(function(o){
-    var now=new Date();
-    if(state.historyUnit!=="All"&&o.unit!==state.historyUnit) return false;
-    if(state.historyFilter==="week") return weekKey(o.date)===weekKey(now);
-    if(state.historyFilter==="month") return monthKey(o.date)===monthKey(now);
-    if(state.historyFilter==="year") return yearKey(o.date)===yearKey(now);
-    return true;
-  });
-  var periodSpend=filtered.reduce(function(s,o){return s+o.total},0);
-  var html='<div class="wrap-md"><div class="pre">Garden Admin</div><div class="h1">Order History</div>'+
-    '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">'+
-    '<div class="stat-card"><div class="stat-label">Total Lifetime</div><div class="stat-value">'+fmt(lifetime)+"</div></div>"+
-    '<div class="stat-card"><div class="stat-label">Restaurant</div><div class="stat-value">'+fmt(rpmLife)+"</div></div>"+
-    '<div class="stat-card"><div class="stat-label">Bakery</div><div class="stat-value">'+fmt(bakLife)+"</div></div></div>"+
-    '<div class="filter-bar">'+
-    [["all","All Time"],["week","This Week"],["month","This Month"],["year","This Year"]].map(function(x){
-      return '<button class="pill'+(state.historyFilter===x[0]?" active":"")+'" onclick="state.historyFilter=\''+x[0]+'\';go(\'admin\')">'+x[1]+"</button>";
-    }).join("")+"</div>"+
-    '<div class="filter-bar">'+
-    ["All","Restaurant","Bakery"].map(function(u){
-      return '<button class="pill'+(state.historyUnit===u?" active":"")+'" onclick="state.historyUnit=\''+u+'\';go(\'admin\')">'+u+"</button>";
-    }).join("")+"</div>"+
-    '<div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:12px;color:var(--muted)">'+
-    '<span>'+filtered.length+' orders</span>'+
-    '<span style="font-family:Georgia,serif;font-size:16px;color:var(--cream)">'+fmt(periodSpend)+"</span></div>";
-  if(!filtered.length) html+='<div class="empty">No orders in this period.</div>';
-  else filtered.forEach(function(o){html+=orderCardHTML(o,true,"admin")});
-  return html+"</div>";
+    '</div>'+
+    '<div class="nav-right">'+
+    '<span style="color:var(--muted);font-size:12px;letter-spacing:1px;margin-right:4px">'+state.unit+'</span>'+
+    '<button class="pill'+(state.screen==="client"?" active":"")+'" onclick="go(\'client\')">Catalogue</button>'+
+    '<button class="pill'+(state.screen==="history"?" active":"")+'" onclick="loadOrders().then(function(){go(\'history\')})">History</button>'+
+    '<button class="pill'+(cc>0?" cart-active":"")+'" onclick="go(\'checkout\')">Order'+(cc>0?" ("+cc+")":"")+' </button>'+
+    '</div></nav>';
 }
 
 function clientHTML(){
@@ -440,8 +295,7 @@ function submitOrder(){
   var total=items.reduce(function(s,i){return s+i.subtotal},0);
   var note=document.getElementById("order-note")?document.getElementById("order-note").value:"";
   var order={unit:state.unit,date:new Date().toISOString(),items:items,total:total,note:note};
-  var url=API+"?action=submitOrder&data="+encodeURIComponent(JSON.stringify(order));
-  jsonp(url).then(function(r){
+  api("action=submitOrder&data="+encodeURIComponent(JSON.stringify(order))).then(function(r){
     if(r.success){
       state.cart={};
       showToast("Order submitted");
@@ -453,7 +307,7 @@ function submitOrder(){
 }
 
 function historyHTML(){
-  var myOrders=state.orders.filter(function(o){return o.unit===state.unit});
+  var myOrders=state.orders;
   var filtered=myOrders.filter(function(o){
     var now=new Date();
     if(state.historyFilter==="week") return weekKey(o.date)===weekKey(now);
@@ -473,17 +327,17 @@ function historyHTML(){
       return '<button class="pill'+(state.historyFilter===x[0]?" active":"")+'" onclick="state.historyFilter=\''+x[0]+'\';go(\'history\')">'+x[1]+"</button>";
     }).join("")+"</div>";
   if(!filtered.length) html+='<div class="empty">No orders in this period.</div>';
-  else filtered.forEach(function(o){html+=orderCardHTML(o,false,"history")});
+  else filtered.forEach(function(o){html+=orderCardHTML(o)});
   return html+"</div>";
 }
 
-function orderCardHTML(o,showUnit,screen){
+function orderCardHTML(o){
   var ds=new Date(o.date).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric",year:"numeric"});
   var open=state.openOrders[o.id];
   return '<div class="order-card">'+
-    '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];go(\''+screen+'\')">'+
+    '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];go(\'history\')">'+
     '<div>'+
-    '<div style="font-size:13px">'+ds+(showUnit?' <span style="font-size:11px;color:var(--accent);margin-left:8px">'+o.unit+"</span>":"")+'</div>'+
+    '<div style="font-size:13px">'+ds+'</div>'+
     '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+" items</div>"+
     '</div>'+
     '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+"</div>"+
@@ -499,7 +353,16 @@ function orderCardHTML(o,showUnit,screen){
     "</div>";
 }
 
-render();
+// On load — restore unit from localStorage
+var savedUnit=null;
+try{savedUnit=localStorage.getItem(UNIT_KEY)}catch(e){}
+if(savedUnit){
+  state.unit=savedUnit;
+  showLoading("Loading...");
+  Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
+} else {
+  render();
+}
 </script>
 </body>
 </html>
