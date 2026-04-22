@@ -107,14 +107,32 @@ function weekKey(d){var dt=new Date(d),j=new Date(dt.getFullYear(),0,1),w=Math.c
 function monthKey(d){var dt=new Date(d);return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")}
 function yearKey(d){return ""+new Date(d).getFullYear()}
 
-function showToast(msg){var t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(function(){t.classList.remove("show")},2500)}
-
-function apiGet(action,extra){
-  return fetch(API+"?action="+action+(extra||"")).then(function(r){return r.json()})
+function showToast(msg){
+  var t=document.getElementById("toast");
+  t.textContent=msg;
+  t.classList.add("show");
+  setTimeout(function(){t.classList.remove("show")},2500);
 }
-function apiPost(action, data){
-  var url = API + "?action=" + action + "&data=" + encodeURIComponent(JSON.stringify(data));
-  return fetch(url).then(function(r){return r.json()});
+
+// JSONP for write operations — bypasses CORS
+function jsonp(url){
+  return new Promise(function(resolve){
+    var cb="cb"+Date.now();
+    window[cb]=function(data){
+      resolve(data);
+      delete window[cb];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    };
+    var script=document.createElement("script");
+    script.src=url+"&callback="+cb;
+    script.onerror=function(){resolve({error:"network error"})};
+    document.head.appendChild(script);
+  });
+}
+
+// GET for read operations
+function apiGet(action,extra){
+  return fetch(API+"?action="+action+(extra||"")).then(function(r){return r.json()});
 }
 
 function render(){
@@ -130,12 +148,10 @@ function render(){
 function go(screen){state.screen=screen;render()}
 
 function showLoading(msg){
-  var app=document.getElementById("app");
-  var nav=(state.screen!=="entry"&&state.screen!=="adminauth")?navHTML():"";
-  app.innerHTML=nav+'<div class="loading"><div class="spinner"></div>'+(msg||"Loading...")+"</div>";
+  document.getElementById("app").innerHTML=
+    '<div class="loading"><div class="spinner"></div>'+(msg||"Loading...")+"</div>";
 }
 
-// ENTRY
 function entryHTML(){
   return '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center">'+
     '<div style="margin-bottom:56px">'+
@@ -150,7 +166,6 @@ function entryHTML(){
     '</div></div>';
 }
 
-// ADMIN AUTH
 function adminAuthHTML(){
   return '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh">'+
     '<div style="background:var(--card);border:1px solid var(--border);padding:40px 36px;width:100%;max-width:320px">'+
@@ -188,18 +203,25 @@ function selectUnit(unit){
 }
 
 function loadProducts(){
-  return apiGet("getProducts").then(function(data){if(data.products)state.products=data.products}).catch(function(e){console.error("loadProducts",e)});
+  return apiGet("getProducts").then(function(data){
+    if(data.products) state.products=data.products;
+  }).catch(function(e){console.error("loadProducts",e)});
 }
+
 function loadAvailability(){
-  return apiGet("getAvailability").then(function(data){if(data.availability)state.availability=data.availability}).catch(function(e){console.error("loadAvailability",e)});
+  return apiGet("getAvailability").then(function(data){
+    if(data.availability) state.availability=data.availability;
+  }).catch(function(e){console.error("loadAvailability",e)});
 }
+
 function loadOrders(unit){
-  return apiGet("getOrders","&unit="+(unit||"All")).then(function(data){if(data.orders)state.orders=data.orders}).catch(function(e){console.error("loadOrders",e)});
+  return apiGet("getOrders","&unit="+(unit||"All")).then(function(data){
+    if(data.orders) state.orders=data.orders;
+  }).catch(function(e){console.error("loadOrders",e)});
 }
 
 function goEntry(){state.unit=null;state.isAdmin=false;state.cart={};go("entry")}
 
-// NAV
 function navHTML(){
   var cc=Object.values(state.cart).reduce(function(s,q){return s+q},0);
   var right="";
@@ -212,11 +234,12 @@ function navHTML(){
       '<button class="pill'+(state.screen==="history"?" active":"")+'" onclick="loadOrders(\''+state.unit+'\').then(function(){go(\'history\')})">History</button>'+
       '<button class="pill'+(cc>0?" cart-active":"")+'" onclick="go(\'checkout\')">Order'+(cc>0?" ("+cc+")":"")+' </button>';
   }
-  return '<nav><div class="logo" onclick="goEntry()"><div class="logo-top">GARDEN</div><div class="logo-sub">Pearl Morissette</div></div>'+
-    '<div class="nav-right">'+right+'</div></nav>';
+  return '<nav><div class="logo" onclick="goEntry()">'+
+    '<div class="logo-top">GARDEN</div>'+
+    '<div class="logo-sub">Pearl Morissette</div>'+
+    '</div><div class="nav-right">'+right+'</div></nav>';
 }
 
-// ADMIN
 function adminHTML(){
   if(state.adminTab==="history") return adminHistoryHTML();
   var cats=["All"].concat(Array.from(new Set(state.products.map(function(p){return p.category}))));
@@ -226,35 +249,46 @@ function adminHTML(){
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px">'+
     '<div class="h1" style="margin-bottom:0">Availability</div>'+
     '<div style="font-size:12px;color:var(--muted)">'+onCount+" of "+state.products.length+" active</div></div>"+
-    '<div class="filter-bar">'+cats.map(function(c){return'<button class="pill'+(state.adminCat===c?" active":"")+'" onclick="state.adminCat=\''+c+'\';go(\'admin\')">'+c+"</button>"}).join("")+"</div>"+
-    '<div style="display:grid;grid-template-columns:24px 1fr 200px 50px;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)"><div></div><div>Product</div><div>Note</div><div></div></div>';
+    '<div class="filter-bar">'+
+    cats.map(function(c){
+      return '<button class="pill'+(state.adminCat===c?" active":"")+'" onclick="state.adminCat=\''+c+'\';go(\'admin\')">'+c+"</button>";
+    }).join("")+
+    "</div>"+
+    '<div style="display:grid;grid-template-columns:24px 1fr 200px 50px;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">'+
+    '<div></div><div>Product</div><div>Note</div><div></div></div>';
+
   filtered.forEach(function(p){
     var av=state.availability[String(p.id)]||{on:false,note:""};
     html+='<div class="admin-row">'+
       '<div class="dot" style="background:'+(av.on?"var(--accent)":"var(--border)")+'"></div>'+
-      '<div><div style="font-size:13px">'+p.name+'</div><div style="font-size:11px;color:var(--muted)">'+p.category+" · "+fmt(p.price)+"/"+p.unit+"</div></div>"+
-      '<input class="field-input" style="margin:0;opacity:'+(av.on?1:0.45)+';font-size:11px;padding:6px 10px" placeholder="Note" value="'+(av.note||"")+'" onchange="setNote('+p.id+',this.value)">'+
-      '<button class="tog '+(av.on?"tog-on":"tog-off")+'" onclick="toggleAvail('+p.id+')">'+(av.on?"ON":"OFF")+"</button></div>";
+      '<div>'+
+      '<div style="font-size:13px">'+p.name+'</div>'+
+      '<div style="font-size:11px;color:var(--muted)">'+p.category+" · "+fmt(p.price)+"/"+p.unit+'</div>'+
+      '</div>'+
+      '<input class="field-input" style="margin:0;opacity:'+(av.on?1:0.45)+';font-size:11px;padding:6px 10px" '+
+      'placeholder="Note" value="'+(av.note||"")+'" onchange="setNote('+p.id+',this.value)">'+
+      '<button class="tog '+(av.on?"tog-on":"tog-off")+'" onclick="toggleAvail('+p.id+')">'+(av.on?"ON":"OFF")+"</button>"+
+      "</div>";
   });
   return html+"</div>";
 }
 
 function toggleAvail(id){
   var cur=state.availability[String(id)]||{on:false,note:""};
-  state.availability[String(id)]={on:!cur.on,note:cur.note||""};
-  var payload={};payload[id]=state.availability[String(id)];
-  apiPost("setAvailability", payload);
+  var newOn=!cur.on;
+  state.availability[String(id)]={on:newOn,note:cur.note||""};
+  var url=API+"?action=setOne&id="+id+"&on="+newOn+"&note="+encodeURIComponent(cur.note||"");
+  jsonp(url).then(function(r){console.log("toggleAvail",r)});
   go("admin");
 }
 
 function setNote(id,note){
   var cur=state.availability[String(id)]||{on:false,note:""};
   state.availability[String(id)]={on:cur.on,note:note};
-  var payload={};payload[id]=state.availability[String(id)];
-  apiPost({action:"setAvailability",availability:payload});
+  var url=API+"?action=setOne&id="+id+"&on="+cur.on+"&note="+encodeURIComponent(note);
+  jsonp(url).then(function(r){console.log("setNote",r)});
 }
 
-// ADMIN HISTORY
 function adminHistoryHTML(){
   var rpmLife=state.orders.filter(function(o){return o.unit==="Restaurant"}).reduce(function(s,o){return s+o.total},0);
   var bakLife=state.orders.filter(function(o){return o.unit==="Bakery"}).reduce(function(s,o){return s+o.total},0);
@@ -273,17 +307,26 @@ function adminHistoryHTML(){
     '<div class="stat-card"><div class="stat-label">Total Lifetime</div><div class="stat-value">'+fmt(lifetime)+"</div></div>"+
     '<div class="stat-card"><div class="stat-label">Restaurant</div><div class="stat-value">'+fmt(rpmLife)+"</div></div>"+
     '<div class="stat-card"><div class="stat-label">Bakery</div><div class="stat-value">'+fmt(bakLife)+"</div></div></div>"+
-    '<div class="filter-bar">'+[["all","All Time"],["week","This Week"],["month","This Month"],["year","This Year"]].map(function(x){return'<button class="pill'+(state.historyFilter===x[0]?" active":"")+'" onclick="state.historyFilter=\''+x[0]+'\';go(\'admin\')">'+x[1]+"</button>"}).join("")+"</div>"+
-    '<div class="filter-bar">'+["All","Restaurant","Bakery"].map(function(u){return'<button class="pill'+(state.historyUnit===u?" active":"")+'" onclick="state.historyUnit=\''+u+'\';go(\'admin\')">'+u+"</button>"}).join("")+"</div>"+
-    '<div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:12px;color:var(--muted)"><span>'+filtered.length+' orders</span><span style="font-family:Georgia,serif;font-size:16px;color:var(--cream)">'+fmt(periodSpend)+"</span></div>";
-  if(!filtered.length){html+='<div class="empty">No orders in this period.</div>'}
-  else{filtered.forEach(function(o){html+=orderCardHTML(o,true,"admin")})}
+    '<div class="filter-bar">'+
+    [["all","All Time"],["week","This Week"],["month","This Month"],["year","This Year"]].map(function(x){
+      return '<button class="pill'+(state.historyFilter===x[0]?" active":"")+'" onclick="state.historyFilter=\''+x[0]+'\';go(\'admin\')">'+x[1]+"</button>";
+    }).join("")+"</div>"+
+    '<div class="filter-bar">'+
+    ["All","Restaurant","Bakery"].map(function(u){
+      return '<button class="pill'+(state.historyUnit===u?" active":"")+'" onclick="state.historyUnit=\''+u+'\';go(\'admin\')">'+u+"</button>";
+    }).join("")+"</div>"+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:12px;color:var(--muted)">'+
+    '<span>'+filtered.length+' orders</span>'+
+    '<span style="font-family:Georgia,serif;font-size:16px;color:var(--cream)">'+fmt(periodSpend)+"</span></div>";
+  if(!filtered.length) html+='<div class="empty">No orders in this period.</div>';
+  else filtered.forEach(function(o){html+=orderCardHTML(o,true,"admin")});
   return html+"</div>";
 }
 
-// CLIENT
 function clientHTML(){
-  var available=state.products.filter(function(p){return state.availability[String(p.id)]&&state.availability[String(p.id)].on});
+  var available=state.products.filter(function(p){
+    return state.availability[String(p.id)]&&state.availability[String(p.id)].on;
+  });
   var cats=["All"].concat(Array.from(new Set(available.map(function(p){return p.category}))));
   if(state.catFilter!=="All"&&cats.indexOf(state.catFilter)<0) state.catFilter="All";
   var filtered=available.filter(function(p){
@@ -297,18 +340,28 @@ function clientHTML(){
     html+='<div class="empty"><div class="empty-title">Nothing listed yet</div><p>The garden team has not set this week\'s availability.</p></div>';
   } else {
     html+='<input class="search-input" id="search-box" placeholder="Search..." value="'+state.search+'" oninput="doSearch(this.value)">'+
-      '<div class="filter-bar">'+cats.map(function(c){return'<button class="pill'+(state.catFilter===c?" active":"")+'" onclick="state.catFilter=\''+c+'\';go(\'client\')">'+c+"</button>"}).join("")+"</div>"+
-      '<div class="table-header product-grid"><div>Product</div><div style="text-align:right">Price</div><div style="text-align:right">Unit</div><div style="text-align:right">Qty</div></div>';
+      '<div class="filter-bar">'+
+      cats.map(function(c){
+        return '<button class="pill'+(state.catFilter===c?" active":"")+'" onclick="state.catFilter=\''+c+'\';go(\'client\')">'+c+"</button>";
+      }).join("")+"</div>"+
+      '<div class="table-header product-grid">'+
+      '<div>Product</div><div style="text-align:right">Price</div><div style="text-align:right">Unit</div><div style="text-align:right">Qty</div>'+
+      '</div>';
     filtered.forEach(function(p){
       var av=state.availability[String(p.id)];
       var qty=state.cart[p.id]||0;
       html+='<div class="table-row product-row'+(qty>0?" row-sel":"")+'" id="pr'+p.id+'">'+
-        '<div><div class="p-name">'+p.name+"</div>"+(av&&av.note?'<div class="p-note">'+av.note+"</div>":"")+
-        '<div class="p-cat">'+p.category+"</div></div>"+
-        '<div class="p-price">'+fmt(p.price)+"</div>"+
-        '<div class="p-unit">'+p.unit+"</div>"+
-        '<div class="qty-ctrl">'+(qty>0?'<button class="qty-btn" onclick="updateCart('+p.id+',-1)">-</button><span class="qty-num">'+qty+"</span>":"")+
-        '<button class="qty-btn'+(qty>0?" on":"")+'" onclick="updateCart('+p.id+',1)">+</button></div></div>';
+        '<div>'+
+        '<div class="p-name">'+p.name+'</div>'+
+        (av&&av.note?'<div class="p-note">'+av.note+'</div>':'')+
+        '<div class="p-cat">'+p.category+'</div>'+
+        '</div>'+
+        '<div class="p-price">'+fmt(p.price)+'</div>'+
+        '<div class="p-unit">'+p.unit+'</div>'+
+        '<div class="qty-ctrl">'+
+        (qty>0?'<button class="qty-btn" onclick="updateCart('+p.id+',-1)">-</button><span class="qty-num">'+qty+'</span>':'')+
+        '<button class="qty-btn'+(qty>0?" on":"")+'" onclick="updateCart('+p.id+',1)">+</button>'+
+        '</div></div>';
     });
     html+='<div id="prod-count" style="padding:16px 0;color:var(--muted);font-size:12px">'+filtered.length+" products shown</div>";
   }
@@ -317,7 +370,9 @@ function clientHTML(){
 
 function doSearch(val){
   state.search=val;
-  var available=state.products.filter(function(p){return state.availability[String(p.id)]&&state.availability[String(p.id)].on});
+  var available=state.products.filter(function(p){
+    return state.availability[String(p.id)]&&state.availability[String(p.id)].on;
+  });
   var filtered=available.filter(function(p){
     if(state.catFilter!=="All"&&p.category!==state.catFilter) return false;
     if(val&&p.name.toLowerCase().indexOf(val.toLowerCase())<0) return false;
@@ -335,12 +390,8 @@ function updateCart(id,delta){
   var n=Math.max(0,(state.cart[id]||0)+delta);
   if(n===0) delete state.cart[id]; else state.cart[id]=n;
   go("client");
-  // Restore search focus
-  var box=document.getElementById("search-box");
-  if(box&&state.search){box.focus();box.value=state.search}
 }
 
-// CHECKOUT
 function checkoutHTML(){
   var items=Object.entries(state.cart).filter(function(e){return e[1]>0}).map(function(e){
     var p=state.products.find(function(p){return p.id===Number(e[0])});
@@ -349,17 +400,25 @@ function checkoutHTML(){
   var total=items.reduce(function(s,i){return s+i.price*i.qty},0);
   var html='<div class="wrap-sm"><div class="pre">'+state.unit+'</div><div class="h1">Your Order</div>';
   if(!items.length){
-    html+='<div class="empty"><div class="empty-title">Nothing added yet</div><button class="btn-primary" style="margin-top:16px" onclick="go(\'client\')">Browse Catalogue</button></div>';
+    html+='<div class="empty"><div class="empty-title">Nothing added yet</div>'+
+      '<button class="btn-primary" style="margin-top:16px" onclick="go(\'client\')">Browse Catalogue</button></div>';
   } else {
-    html+='<div class="table-header" style="grid-template-columns:1fr 90px 80px 80px"><div>Item</div><div style="text-align:center">Qty</div><div style="text-align:right">Unit</div><div style="text-align:right">Total</div></div>';
+    html+='<div class="table-header" style="grid-template-columns:1fr 90px 80px 80px">'+
+      '<div>Item</div><div style="text-align:center">Qty</div><div style="text-align:right">Unit</div><div style="text-align:right">Total</div></div>';
     items.forEach(function(i){
       html+='<div class="table-row checkout-row">'+
-        '<div style="font-size:13px">'+i.name+"</div>"+
-        '<div style="display:flex;align-items:center;justify-content:center;gap:6px"><button class="qty-btn" onclick="updateCartCheckout('+i.id+',-1)">-</button><span class="qty-num">'+i.qty+'</span><button class="qty-btn" onclick="updateCartCheckout('+i.id+',1)">+</button></div>'+
-        '<div style="text-align:right;font-size:11px;color:var(--muted)">'+i.qty+" "+i.unit+"</div>"+
-        '<div style="text-align:right;font-family:Georgia,serif;font-size:15px">'+fmt(i.price*i.qty)+"</div></div>";
+        '<div style="font-size:13px">'+i.name+'</div>'+
+        '<div style="display:flex;align-items:center;justify-content:center;gap:6px">'+
+        '<button class="qty-btn" onclick="updateCartCheckout('+i.id+',-1)">-</button>'+
+        '<span class="qty-num">'+i.qty+'</span>'+
+        '<button class="qty-btn" onclick="updateCartCheckout('+i.id+',1)">+</button>'+
+        '</div>'+
+        '<div style="text-align:right;font-size:11px;color:var(--muted)">'+i.qty+' '+i.unit+'</div>'+
+        '<div style="text-align:right;font-family:Georgia,serif;font-size:15px">'+fmt(i.price*i.qty)+'</div></div>';
     });
-    html+='<div class="total-bar"><span style="color:var(--muted);font-size:12px">Order Total</span><span style="font-family:Georgia,serif;font-size:28px;font-weight:300">'+fmt(total)+"</span></div>"+
+    html+='<div class="total-bar">'+
+      '<span style="color:var(--muted);font-size:12px">Order Total</span>'+
+      '<span style="font-family:Georgia,serif;font-size:28px;font-weight:300">'+fmt(total)+'</span></div>'+
       '<label class="field-label">Note to Garden (optional)</label>'+
       '<textarea class="field-textarea" id="order-note" placeholder="Timing, substitutions..."></textarea>'+
       '<button class="btn-primary btn-full" style="margin-top:16px" onclick="submitOrder()">Submit Order</button>';
@@ -380,12 +439,19 @@ function submitOrder(){
   });
   var total=items.reduce(function(s,i){return s+i.subtotal},0);
   var note=document.getElementById("order-note")?document.getElementById("order-note").value:"";
-  apiWrite("submitOrder",{data:encodeURIComponent(JSON.stringify({unit:state.unit,date:new Date().toISOString(),items:items,total:total,note:note}))}).then(function(){
-    state.cart={};showToast("Order submitted");go("client");
-  }).catch(function(){showToast("Error — try again")});
+  var order={unit:state.unit,date:new Date().toISOString(),items:items,total:total,note:note};
+  var url=API+"?action=submitOrder&data="+encodeURIComponent(JSON.stringify(order));
+  jsonp(url).then(function(r){
+    if(r.success){
+      state.cart={};
+      showToast("Order submitted");
+      go("client");
+    } else {
+      showToast("Error — try again");
+    }
+  });
 }
 
-// HISTORY
 function historyHTML(){
   var myOrders=state.orders.filter(function(o){return o.unit===state.unit});
   var filtered=myOrders.filter(function(o){
@@ -400,10 +466,14 @@ function historyHTML(){
   var html='<div class="wrap-md"><div class="pre">'+state.unit+'</div><div class="h1">Order History</div>'+
     '<div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">'+
     '<div class="stat-card"><div class="stat-label">Lifetime Spend</div><div class="stat-value">'+fmt(lifetime)+"</div></div>"+
-    '<div class="stat-card"><div class="stat-label">This Period</div><div class="stat-value">'+fmt(periodSpend)+'</div><div class="stat-sub">'+filtered.length+" orders</div></div></div>"+
-    '<div class="filter-bar">'+[["all","All Time"],["week","This Week"],["month","This Month"],["year","This Year"]].map(function(x){return'<button class="pill'+(state.historyFilter===x[0]?" active":"")+'" onclick="state.historyFilter=\''+x[0]+'\';go(\'history\')">'+x[1]+"</button>"}).join("")+"</div>";
-  if(!filtered.length){html+='<div class="empty">No orders in this period.</div>'}
-  else{filtered.forEach(function(o){html+=orderCardHTML(o,false,"history")})}
+    '<div class="stat-card"><div class="stat-label">This Period</div><div class="stat-value">'+fmt(periodSpend)+
+    '</div><div class="stat-sub">'+filtered.length+" orders</div></div></div>"+
+    '<div class="filter-bar">'+
+    [["all","All Time"],["week","This Week"],["month","This Month"],["year","This Year"]].map(function(x){
+      return '<button class="pill'+(state.historyFilter===x[0]?" active":"")+'" onclick="state.historyFilter=\''+x[0]+'\';go(\'history\')">'+x[1]+"</button>";
+    }).join("")+"</div>";
+  if(!filtered.length) html+='<div class="empty">No orders in this period.</div>';
+  else filtered.forEach(function(o){html+=orderCardHTML(o,false,"history")});
   return html+"</div>";
 }
 
@@ -412,11 +482,20 @@ function orderCardHTML(o,showUnit,screen){
   var open=state.openOrders[o.id];
   return '<div class="order-card">'+
     '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];go(\''+screen+'\')">'+
-    '<div><div style="font-size:13px">'+ds+(showUnit?' <span style="font-size:11px;color:var(--accent);margin-left:8px">'+o.unit+"</span>":"")+"</div>"+
-    '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+" items</div></div>"+
+    '<div>'+
+    '<div style="font-size:13px">'+ds+(showUnit?' <span style="font-size:11px;color:var(--accent);margin-left:8px">'+o.unit+"</span>":"")+'</div>'+
+    '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+" items</div>"+
+    '</div>'+
     '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+"</div>"+
-    '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+"</div></div>"+
-    (open?'<div class="order-detail">'+o.items.map(function(i){return'<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+" "+i.unit+" · "+fmt(i.subtotal)+"</span></div>"}).join("")+(o.note?'<div class="order-note">'+o.note+"</div>":"")+"</div>":"")+
+    '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+"</div>"+
+    "</div>"+
+    (open?
+      '<div class="order-detail">'+
+      o.items.map(function(i){
+        return '<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>';
+      }).join("")+
+      (o.note?'<div class="order-note">'+o.note+"</div>":"")+
+      "</div>":"")+
     "</div>";
 }
 
