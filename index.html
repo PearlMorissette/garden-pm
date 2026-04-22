@@ -19,7 +19,9 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .pill{background:transparent;color:var(--muted);border:1px solid var(--border);padding:6px 16px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s}
 .pill.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 .pill.cart-active{color:var(--accent);border-color:var(--accent)}
-.page{display:none}.page.active{display:block}
+.page{display:none!important}.page.active{display:block!important}
+#page-entry.active{display:flex!important}
+#page-adminauth.active{display:flex!important}
 .wrap{max-width:900px;margin:0 auto;padding:40px 24px}
 .wrap-sm{max-width:600px;margin:0 auto;padding:40px 24px}
 .wrap-md{max-width:800px;margin:0 auto;padding:40px 24px}
@@ -197,7 +199,7 @@ function saveOrders() { try { localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stri
 
 // UTILS
 const fmt = n => '$' + Number(n).toFixed(2);
-const $ = id => document.getElementById(id);
+const el = id => document.getElementById(id);
 function weekKey(d){const dt=new Date(d),j=new Date(dt.getFullYear(),0,1),w=Math.ceil(((dt-j)/86400000+j.getDay()+1)/7);return dt.getFullYear()+'-W'+String(w).padStart(2,'0')}
 function monthKey(d){const dt=new Date(d);return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')}
 function yearKey(d){return ''+new Date(d).getFullYear()}
