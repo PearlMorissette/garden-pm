@@ -120,11 +120,9 @@ function apiGet(action, extra) {
 }
 
 function apiPost(data) {
-  return fetch(API, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify(data)
-  }).then(function(r){ return r.json(); });
+  var encoded = encodeURIComponent(JSON.stringify(data));
+  return fetch(API + "?payload=" + encoded)
+    .then(function(r){ return r.json(); });
 }
 
 function render() {
