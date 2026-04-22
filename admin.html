@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Garden Admin — Pearl Morissette</title>
+<style>
+:root{--bg:#0A0A09;--card:#141413;--border:#2A2926;--cream:#E8E2D6;--muted:#8A8478;--accent:#C4A97D}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--cream);min-height:100vh}
+button{cursor:pointer;font-family:inherit}
+input,textarea{font-family:inherit}
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-60px);background:var(--accent);color:var(--bg);padding:10px 28px;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;opacity:0;transition:all .3s;pointer-events:none;z-index:999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,10,9,.96);z-index:100;flex-wrap:wrap;gap:10px}
+.logo-top{font-size:18px;font-weight:300;letter-spacing:3px;font-family:Georgia,serif}
+.logo-sub{font-size:10px;letter-spacing:4px;color:var(--muted);margin-top:2px}
+.nav-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{background:transparent;color:var(--muted);border:1px solid var(--border);padding:6px 16px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s}
+.pill.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.wrap{max-width:900px;margin:0 auto;padding:40px 24px}
+.wrap-md{max-width:800px;margin:0 auto;padding:40px 24px}
+.pre{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.h1{font-family:Georgia,serif;font-size:32px;font-weight:300;margin-bottom:32px}
+.field-label{display:block;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field-input{width:100%;background:transparent;border:1px solid var(--border);color:var(--cream);padding:10px 14px;font-size:13px;outline:none;margin-bottom:16px}
+.field-input:focus{border-color:var(--accent)}
+.btn-primary{background:var(--accent);color:var(--bg);border:none;padding:11px 24px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.btn-secondary{background:transparent;color:var(--cream);border:1px solid var(--border);padding:11px 24px;font-size:11px;letter-spacing:2px;text-transform:uppercase}
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px}
+.admin-row{display:grid;grid-template-columns:24px 1fr 200px 50px;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center}
+.dot{width:10px;height:10px;border-radius:50%;margin:0 auto}
+.tog{font-size:10px;font-weight:700;width:48px;padding:6px 0;border:1px solid;text-align:center}
+.tog-on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.tog-off{background:transparent;color:var(--muted);border-color:var(--border)}
+.stat-grid{display:grid;gap:1px;margin-bottom:40px}
+.stat-card{background:var(--card);border:1px solid var(--border);padding:24px}
+.stat-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.stat-value{font-family:Georgia,serif;font-size:32px;font-weight:300}
+.order-card{background:var(--card);border:1px solid var(--border);margin-bottom:2px}
+.order-head{display:grid;grid-template-columns:1fr 100px 100px 80px;gap:12px;padding:14px 16px;align-items:center;cursor:pointer}
+.order-detail{border-top:1px solid var(--border);padding:12px 16px}
+.order-detail-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid #1e1d1b}
+.order-note{margin-top:10px;font-size:12px;color:var(--accent);font-style:italic}
+.empty{text-align:center;padding:60px 24px;color:var(--muted)}
+.loading{text-align:center;padding:80px 24px;color:var(--muted);font-size:13px;letter-spacing:1px}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.auth-card{background:var(--card);border:1px solid var(--border);padding:40px 36px;width:100%;max-width:320px}
+.auth-error{color:#c44;font-size:12px;margin-bottom:12px;display:none}
+@media(max-width:600px){
+  .admin-row{grid-template-columns:16px 1fr 100px 48px;gap:8px;padding:8px}
+  nav{padding:12px 16px}
+  .wrap,.wrap-md{padding:28px 16px}
+}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="pre">Garden Team</div>
+    <div style="font-family:Georgia,serif;font-size:26px;font-weight:300;margin-bottom:28px">Admin Access</div>
+    <label class="field-label">Passcode</label>
+    <input class="field-input" type="password" id="admin-code" placeholder="........" onkeydown="if(event.key==='Enter')tryAdmin()">
+    <div id="admin-err" class="auth-error">Incorrect passcode</div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-primary" onclick="tryAdmin()">Enter</button>
+    </div>
+  </div>
+</div>
+<div id="main-app" style="display:none">
+  <nav>
+    <div>
+      <div class="logo-top">GARDEN</div>
+      <div class="logo-sub">Pearl Morissette · Admin</div>
+    </div>
+    <div class="nav-right">
+      <button class="pill" id="tab-avail" onclick="switchTab('availability')">Availability</button>
+      <button class="pill" id="tab-orders" onclick="switchTab('orders')">Orders</button>
+      <button class="pill" onclick="logout()" style="color:var(--muted)">Sign Out</button>
+    </div>
+  </nav>
+  <div id="app-content"></div>
+</div>
+
+<script>
+var API = "https://garden-pm-proxy-0a2d338d45e9.herokuapp.com";
+var ADMIN_CODE = "garden2024";
+var AUTH_KEY = "gpm_admin_auth";
+
+var state = {
+  tab: "availability",
+  products: [],
+  availability: {},
+  orders: [],
+  adminCat: "All",
+  historyFilter: "all",
+  historyUnit: "All",
+  openOrders: {}
+};
+
+function fmt(n){return "$"+Number(n).toFixed(2)}
+function weekKey(d){var dt=new Date(d),j=new Date(dt.getFullYear(),0,1),w=Math.ceil(((dt-j)/86400000+j.getDay()+1)/7);return dt.getFullYear()+"-W"+String(w).padStart(2,"0")}
+function monthKey(d){var dt=new Date(d);return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")}
+function yearKey(d){return ""+new Date(d).getFullYear()}
+
+function showToast(msg){
+  var t=document.getElementById("toast");
+  t.textContent=msg;
+  t.classList.add("show");
+  setTimeout(function(){t.classList.remove("show")},2500);
+}
+
+function api(params){
+  return fetch(API+"?"+params).then(function(r){return r.json()});
+}
+
+function tryAdmin(){
+  var code=document.getElementById("admin-code").value;
+  if(code===ADMIN_CODE){
+    try{localStorage.setItem(AUTH_KEY,"1")}catch(e){}
+    showAdmin();
+  } else {
+    document.getElementById("admin-err").style.display="block";
+  }
+}
+
+function showAdmin(){
+  document.getElementById("auth-screen").style.display="none";
+  document.getElementById("main-app").style.display="block";
+  showLoading();
+  Promise.all([loadProducts(),loadAvailability(),loadOrders()]).then(function(){
+    renderTab();
+  });
+}
+
+function logout(){
+  try{localStorage.removeItem(AUTH_KEY)}catch(e){}
+  document.getElementById("auth-screen").style.display="flex";
+  document.getElementById("main-app").style.display="none";
+  document.getElementById("admin-code").value="";
+}
+
+function showLoading(){
+  document.getElementById("app-content").innerHTML=
+    '<div class="loading"><div class="spinner"></div>Loading...</div>';
+}
+
+function loadProducts(){
+  return api("action=getProducts").then(function(data){
+    if(data.products) state.products=data.products;
+  });
+}
+
+function loadAvailability(){
+  return api("action=getAvailability").then(function(data){
+    if(data.availability) state.availability=data.availability;
+  });
+}
+
+function loadOrders(){
+  return api("action=getOrders&unit=All").then(function(data){
+    if(data.orders) state.orders=data.orders;
+  });
+}
+
+function switchTab(tab){
+  state.tab=tab;
+  document.getElementById("tab-avail").classList.toggle("active",tab==="availability");
+  document.getElementById("tab-orders").classList.toggle("active",tab==="orders");
+  if(tab==="orders"){
+    showLoading();
+    loadOrders().then(function(){renderTab()});
+  } else {
+    renderTab();
+  }
+}
+
+function renderTab(){
+  document.getElementById("tab-avail").classList.toggle("active",state.tab==="availability");
+  document.getElementById("tab-orders").classList.toggle("active",state.tab==="orders");
+  if(state.tab==="availability") renderAvailability();
+  else renderOrders();
+}
+
+function renderAvailability(){
+  var cats=["All"].concat(Array.from(new Set(state.products.map(function(p){return p.category}))));
+  var filtered=state.products.filter(function(p){return state.adminCat==="All"||p.category===state.adminCat});
+  var onCount=Object.values(state.availability).filter(function(v){return v.on}).length;
+
+  var html='<div class="wrap">'+
+    '<div class="pre">This Week</div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px">'+
+    '<div class="h1" style="margin-bottom:0">Availability</div>'+
+    '<div style="font-size:12px;color:var(--muted)">'+onCount+" of "+state.products.length+" active</div></div>"+
+    '<div class="filter-bar">'+
+    cats.map(function(c){
+      return '<button class="pill'+(state.adminCat===c?" active":"")+'" onclick="state.adminCat=\''+c+'\';renderAvailability()">'+c+"</button>";
+    }).join("")+"</div>"+
+    '<div style="display:grid;grid-template-columns:24px 1fr 200px 50px;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">'+
+    '<div></div><div>Product</div><div>Note</div><div></div></div>';
+
+  filtered.forEach(function(p){
+    var av=state.availability[String(p.id)]||{on:false,note:""};
+    html+='<div class="admin-row">'+
+      '<div class="dot" style="background:'+(av.on?"var(--accent)":"var(--border)")+'"></div>'+
+      '<div>'+
+      '<div style="font-size:13px">'+p.name+'</div>'+
+      '<div style="font-size:11px;color:var(--muted)">'+p.category+" · "+fmt(p.price)+"/"+p.unit+'</div>'+
+      '</div>'+
+      '<input class="field-input" style="margin:0;opacity:'+(av.on?1:0.45)+';font-size:11px;padding:6px 10px" '+
+      'placeholder="Note" value="'+(av.note||"")+'" onchange="setNote('+p.id+',this.value)">'+
+      '<button class="tog '+(av.on?"tog-on":"tog-off")+'" onclick="toggleAvail('+p.id+')">'+(av.on?"ON":"OFF")+"</button>"+
+      "</div>";
+  });
+
+  document.getElementById("app-content").innerHTML=html+"</div>";
+}
+
+function toggleAvail(id){
+  var cur=state.availability[String(id)]||{on:false,note:""};
+  var newOn=!cur.on;
+  state.availability[String(id)]={on:newOn,note:cur.note||""};
+  renderAvailability();
+  api("action=setOne&id="+id+"&on="+newOn+"&note="+encodeURIComponent(cur.note||"")).then(function(r){
+    if(r.success) showToast(newOn?"On":"Off");
+    else showToast("Error saving");
+  });
+}
+
+function setNote(id,note){
+  var cur=state.availability[String(id)]||{on:false,note:""};
+  state.availability[String(id)]={on:cur.on,note:note};
+  api("action=setOne&id="+id+"&on="+cur.on+"&note="+encodeURIComponent(note));
+}
+
+function renderOrders(){
+  var rpmLife=state.orders.filter(function(o){return o.unit==="Restaurant"}).reduce(function(s,o){return s+o.total},0);
+  var bakLife=state.orders.filter(function(o){return o.unit==="Bakery"}).reduce(function(s,o){return s+o.total},0);
+  var lifetime=state.orders.reduce(function(s,o){return s+o.total},0);
+  var filtered=state.orders.filter(function(o){
+    var now=new Date();
+    if(state.historyUnit!=="All"&&o.unit!==state.historyUnit) return false;
+    if(state.historyFilter==="week") return weekKey(o.date)===weekKey(now);
+    if(state.historyFilter==="month") return monthKey(o.date)===monthKey(now);
+    if(state.historyFilter==="year") return yearKey(o.date)===yearKey(now);
+    return true;
+  });
+  var periodSpend=filtered.reduce(function(s,o){return s+o.total},0);
+
+  var html='<div class="wrap-md">'+
+    '<div class="pre">Garden Admin</div><div class="h1">Order History</div>'+
+    '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">'+
+    '<div class="stat-card"><div class="stat-label">Total Lifetime</div><div class="stat-value">'+fmt(lifetime)+"</div></div>"+
+    '<div class="stat-card"><div class="stat-label">Restaurant</div><div class="stat-value">'+fmt(rpmLife)+"</div></div>"+
+    '<div class="stat-card"><div class="stat-label">Bakery</div><div class="stat-value">'+fmt(bakLife)+"</div></div></div>"+
+    '<div class="filter-bar">'+
+    [["all","All Time"],["week","This Week"],["month","This Month"],["year","This Year"]].map(function(x){
+      return '<button class="pill'+(state.historyFilter===x[0]?" active":"")+'" onclick="state.historyFilter=\''+x[0]+'\';renderOrders()">'+x[1]+"</button>";
+    }).join("")+"</div>"+
+    '<div class="filter-bar">'+
+    ["All","Restaurant","Bakery"].map(function(u){
+      return '<button class="pill'+(state.historyUnit===u?" active":"")+'" onclick="state.historyUnit=\''+u+'\';renderOrders()">'+u+"</button>";
+    }).join("")+"</div>"+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:12px;color:var(--muted)">'+
+    '<span>'+filtered.length+' orders</span>'+
+    '<span style="font-family:Georgia,serif;font-size:16px;color:var(--cream)">'+fmt(periodSpend)+"</span></div>";
+
+  if(!filtered.length) html+='<div class="empty">No orders in this period.</div>';
+  else {
+    filtered.forEach(function(o){
+      var ds=new Date(o.date).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric",year:"numeric"});
+      var open=state.openOrders[o.id];
+      html+='<div class="order-card">'+
+        '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];renderOrders()">'+
+        '<div>'+
+        '<div style="font-size:13px">'+ds+'</div>'+
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+" items</div>"+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--accent);letter-spacing:1px">'+o.unit+'</div>'+
+        '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+"</div>"+
+        '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+"</div>"+
+        "</div>"+
+        (open?
+          '<div class="order-detail">'+
+          o.items.map(function(i){
+            return '<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>';
+          }).join("")+
+          (o.note?'<div class="order-note">'+o.note+"</div>":"")+
+          "</div>":"")+
+        "</div>";
+    });
+  }
+
+  document.getElementById("app-content").innerHTML=html+"</div>";
+}
+
+// Auto-login if previously authenticated
+var authed=false;
+try{authed=localStorage.getItem(AUTH_KEY)==="1"}catch(e){}
+if(authed) showAdmin();
+</script>
+</body>
+</html>
