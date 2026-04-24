@@ -255,7 +255,7 @@ function clientHTML(){
         '<div class="p-name">'+p.name+'</div>'+
         (av&&av.note?'<div class="p-note">'+av.note+'</div>':'')+
         '<div class="p-cat">'+p.category+'</div>'+
-        (remaining!==null?'<div class="p-remaining">'+remaining+' '+p.unit+' remaining</div>':'')+
+        (remaining!==null?'<div class="p-remaining">'+(remaining===0?"Sold out":remaining+" "+p.unit+" available")+'</div>':'')+
         '</div>'+
         '<div class="p-price">'+fmt(p.price)+'</div>'+
         '<div class="p-unit">'+p.unit+'</div>'+
@@ -301,7 +301,10 @@ function updateCart(id,delta,maxQty){
 function setCartQty(id,val,maxQty){
   var n=parseInt(val)||0;
   n=Math.max(0,n);
-  if(maxQty!==undefined&&maxQty!==null) n=Math.min(n,maxQty);
+  if(maxQty!==null&&maxQty!==undefined&&n>maxQty){
+    showToast("Only "+maxQty+" available — quantity adjusted");
+    n=maxQty;
+  }
   if(n===0) delete state.cart[id]; else state.cart[id]=n;
   saveCart();
   go("client");
