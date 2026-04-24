@@ -25,18 +25,23 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .field-label{display:block;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .field-input{width:100%;background:transparent;border:1px solid var(--border);color:var(--cream);padding:10px 14px;font-size:13px;outline:none;margin-bottom:16px}
 .field-input:focus{border-color:var(--accent)}
-.btn-primary{background:var(--accent);color:var(--bg);border:none;padding:11px 24px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.btn-primary{background:var(--accent);color:var(--bg);border:none;padding:11px 24px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;transition:opacity .2s}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed}
 .btn-secondary{background:transparent;color:var(--cream);border:1px solid var(--border);padding:11px 24px;font-size:11px;letter-spacing:2px;text-transform:uppercase}
+.btn-danger{background:transparent;color:#c44;border:1px solid #c44;padding:8px 20px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase}
 .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px}
-.admin-row{display:grid;grid-template-columns:24px 1fr 200px 50px;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center}
+.admin-row{display:grid;grid-template-columns:24px 1fr 120px 80px 60px;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center}
 .dot{width:10px;height:10px;border-radius:50%;margin:0 auto}
 .tog{font-size:10px;font-weight:700;width:48px;padding:6px 0;border:1px solid;text-align:center}
 .tog-on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 .tog-off{background:transparent;color:var(--muted);border-color:var(--border)}
+.max-input{background:transparent;border:1px solid var(--border);color:var(--cream);width:64px;padding:5px 8px;font-size:12px;text-align:center;outline:none}
+.max-input:focus{border-color:var(--accent)}
 .stat-grid{display:grid;gap:1px;margin-bottom:40px}
 .stat-card{background:var(--card);border:1px solid var(--border);padding:24px}
 .stat-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .stat-value{font-family:Georgia,serif;font-size:32px;font-weight:300}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
 .order-card{background:var(--card);border:1px solid var(--border);margin-bottom:2px}
 .order-head{display:grid;grid-template-columns:1fr 100px 100px 80px;gap:12px;padding:14px 16px;align-items:center;cursor:pointer}
 .order-detail{border-top:1px solid var(--border);padding:12px 16px}
@@ -50,7 +55,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .auth-card{background:var(--card);border:1px solid var(--border);padding:40px 36px;width:100%;max-width:320px}
 .auth-error{color:#c44;font-size:12px;margin-bottom:12px;display:none}
 @media(max-width:600px){
-  .admin-row{grid-template-columns:16px 1fr 100px 48px;gap:8px;padding:8px}
+  .admin-row{grid-template-columns:16px 1fr 80px 60px 48px;gap:6px;padding:8px}
+  .order-head{grid-template-columns:1fr 80px 80px 60px}
   nav{padding:12px 16px}
   .wrap,.wrap-md{padding:28px 16px}
 }
@@ -79,6 +85,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
     <div class="nav-right">
       <button class="pill" id="tab-avail" onclick="switchTab('availability')">Availability</button>
       <button class="pill" id="tab-orders" onclick="switchTab('orders')">Orders</button>
+      <button class="pill" id="tab-dash" onclick="switchTab('dashboard')">Dashboard</button>
       <button class="pill" onclick="logout()" style="color:var(--muted)">Sign Out</button>
     </div>
   </nav>
@@ -94,6 +101,7 @@ var state = {
   tab: "availability",
   products: [],
   availability: {},
+  inventory: {},
   orders: [],
   adminCat: "All",
   historyFilter: "all",
@@ -131,7 +139,7 @@ function showAdmin(){
   document.getElementById("auth-screen").style.display="none";
   document.getElementById("main-app").style.display="block";
   showLoading();
-  Promise.all([loadProducts(),loadAvailability(),loadOrders()]).then(function(){
+  Promise.all([loadProducts(),loadAvailability(),loadInventory(),loadOrders()]).then(function(){
     renderTab();
   });
 }
@@ -160,6 +168,12 @@ function loadAvailability(){
   });
 }
 
+function loadInventory(){
+  return api("action=getInventory").then(function(data){
+    if(data.ordered) state.inventory=data.ordered;
+  });
+}
+
 function loadOrders(){
   return api("action=getOrders&unit=All").then(function(data){
     if(data.orders) state.orders=data.orders;
@@ -168,21 +182,30 @@ function loadOrders(){
 
 function switchTab(tab){
   state.tab=tab;
-  document.getElementById("tab-avail").classList.toggle("active",tab==="availability");
-  document.getElementById("tab-orders").classList.toggle("active",tab==="orders");
+  ["avail","orders","dash"].forEach(function(t){
+    document.getElementById("tab-"+t).classList.remove("active");
+  });
+  document.getElementById("tab-"+(tab==="availability"?"avail":tab==="orders"?"orders":"dash")).classList.add("active");
+
   if(tab==="orders"){
     showLoading();
     loadOrders().then(function(){renderTab()});
+  } else if(tab==="dashboard"){
+    showLoading();
+    loadOrders().then(function(){renderTab()});
   } else {
-    renderTab();
+    showLoading();
+    Promise.all([loadAvailability(),loadInventory()]).then(function(){renderTab()});
   }
 }
 
 function renderTab(){
   document.getElementById("tab-avail").classList.toggle("active",state.tab==="availability");
   document.getElementById("tab-orders").classList.toggle("active",state.tab==="orders");
+  document.getElementById("tab-dash").classList.toggle("active",state.tab==="dashboard");
   if(state.tab==="availability") renderAvailability();
-  else renderOrders();
+  else if(state.tab==="orders") renderOrders();
+  else renderDashboard();
 }
 
 function renderAvailability(){
@@ -192,26 +215,40 @@ function renderAvailability(){
 
   var html='<div class="wrap">'+
     '<div class="pre">This Week</div>'+
-    '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px">'+
     '<div class="h1" style="margin-bottom:0">Availability</div>'+
-    '<div style="font-size:12px;color:var(--muted)">'+onCount+" of "+state.products.length+" active</div></div>"+
+    '<div style="display:flex;gap:10px;align-items:center">'+
+    '<div style="font-size:12px;color:var(--muted)">'+onCount+" of "+state.products.length+" active</div>"+
+    '<button class="btn-danger" onclick="confirmReset()">Reset Week</button>'+
+    '</div></div>'+
     '<div class="filter-bar">'+
     cats.map(function(c){
       return '<button class="pill'+(state.adminCat===c?" active":"")+'" onclick="state.adminCat=\''+c+'\';renderAvailability()">'+c+"</button>";
     }).join("")+"</div>"+
-    '<div style="display:grid;grid-template-columns:24px 1fr 200px 50px;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">'+
-    '<div></div><div>Product</div><div>Note</div><div></div></div>';
+    '<div style="display:grid;grid-template-columns:24px 1fr 120px 80px 60px;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">'+
+    '<div></div><div>Product</div><div>Note</div><div style="text-align:center">Available QTY</div><div></div></div>';
 
   filtered.forEach(function(p){
-    var av=state.availability[String(p.id)]||{on:false,note:""};
+    var av=state.availability[String(p.id)]||{on:false,note:"",max:0,remaining:null};
+    var ordered=state.inventory[String(p.id)]||0;
+    var max=av.max||0;
+    var remaining=av.remaining;
+
+    var remainingText="";
+    if(max>0){
+      remainingText='<div style="font-size:10px;color:var(--muted);margin-top:2px">'+ordered+" used / "+max+" max</div>";
+    }
+
     html+='<div class="admin-row">'+
       '<div class="dot" style="background:'+(av.on?"var(--accent)":"var(--border)")+'"></div>'+
       '<div>'+
       '<div style="font-size:13px">'+p.name+'</div>'+
       '<div style="font-size:11px;color:var(--muted)">'+p.category+" · "+fmt(p.price)+"/"+p.unit+'</div>'+
+      remainingText+
       '</div>'+
       '<input class="field-input" style="margin:0;opacity:'+(av.on?1:0.45)+';font-size:11px;padding:6px 10px" '+
       'placeholder="Note" value="'+(av.note||"")+'" onchange="setNote('+p.id+',this.value)">'+
+      '<input class="max-input" type="number" min="0" placeholder="0" value="'+(max||"")+'" onchange="setMax('+p.id+',this.value)" title="Available QTY">'+
       '<button class="tog '+(av.on?"tog-on":"tog-off")+'" onclick="toggleAvail('+p.id+')">'+(av.on?"ON":"OFF")+"</button>"+
       "</div>";
   });
@@ -219,10 +256,21 @@ function renderAvailability(){
   document.getElementById("app-content").innerHTML=html+"</div>";
 }
 
+function confirmReset(){
+  if(confirm("Reset weekly inventory? This will clear all ordered quantities and start fresh.")){
+    api("action=resetInventory").then(function(r){
+      if(r.success){
+        showToast("Inventory reset");
+        loadInventory().then(function(){renderAvailability()});
+      }
+    });
+  }
+}
+
 function toggleAvail(id){
-  var cur=state.availability[String(id)]||{on:false,note:""};
+  var cur=state.availability[String(id)]||{on:false,note:"",max:0};
   var newOn=!cur.on;
-  state.availability[String(id)]={on:newOn,note:cur.note||""};
+  state.availability[String(id)]=Object.assign({},cur,{on:newOn});
   renderAvailability();
   api("action=setOne&id="+id+"&on="+newOn+"&note="+encodeURIComponent(cur.note||"")).then(function(r){
     if(r.success) showToast(newOn?"On":"Off");
@@ -231,9 +279,18 @@ function toggleAvail(id){
 }
 
 function setNote(id,note){
-  var cur=state.availability[String(id)]||{on:false,note:""};
-  state.availability[String(id)]={on:cur.on,note:note};
+  var cur=state.availability[String(id)]||{on:false,note:"",max:0};
+  state.availability[String(id)]=Object.assign({},cur,{note:note});
   api("action=setOne&id="+id+"&on="+cur.on+"&note="+encodeURIComponent(note));
+}
+
+function setMax(id,val){
+  var max=parseFloat(val)||0;
+  var cur=state.availability[String(id)]||{on:false,note:"",max:0};
+  state.availability[String(id)]=Object.assign({},cur,{max:max});
+  api("action=setMax&id="+id+"&max="+max).then(function(r){
+    if(r.success) showToast("QTY saved");
+  });
 }
 
 function renderOrders(){
@@ -250,8 +307,7 @@ function renderOrders(){
   });
   var periodSpend=filtered.reduce(function(s,o){return s+o.total},0);
 
-  var html='<div class="wrap-md">'+
-    '<div class="pre">Garden Admin</div><div class="h1">Order History</div>'+
+  var html='<div class="wrap-md"><div class="pre">Garden Admin</div><div class="h1">Order History</div>'+
     '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">'+
     '<div class="stat-card"><div class="stat-label">Total Lifetime</div><div class="stat-value">'+fmt(lifetime)+"</div></div>"+
     '<div class="stat-card"><div class="stat-label">Restaurant</div><div class="stat-value">'+fmt(rpmLife)+"</div></div>"+
@@ -275,26 +331,129 @@ function renderOrders(){
       var open=state.openOrders[o.id];
       html+='<div class="order-card">'+
         '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];renderOrders()">'+
-        '<div>'+
-        '<div style="font-size:13px">'+ds+'</div>'+
-        '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+" items</div>"+
-        '</div>'+
+        '<div><div style="font-size:13px">'+ds+'</div>'+
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+" items</div></div>"+
         '<div style="font-size:11px;color:var(--accent);letter-spacing:1px">'+o.unit+'</div>'+
         '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+"</div>"+
-        '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+"</div>"+
-        "</div>"+
-        (open?
-          '<div class="order-detail">'+
-          o.items.map(function(i){
-            return '<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>';
-          }).join("")+
-          (o.note?'<div class="order-note">'+o.note+"</div>":"")+
-          "</div>":"")+
+        '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+"</div></div>"+
+        (open?'<div class="order-detail">'+
+        o.items.map(function(i){return'<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>'}).join("")+
+        (o.note?'<div class="order-note">'+o.note+"</div>":"")+
+        "</div>":"")+
         "</div>";
     });
   }
 
   document.getElementById("app-content").innerHTML=html+"</div>";
+}
+
+function renderDashboard(){
+  var orders=state.orders;
+  if(!orders.length){
+    document.getElementById("app-content").innerHTML='<div class="wrap"><div class="pre">Garden Admin</div><div class="h1">Dashboard</div><div class="empty">No orders yet.</div></div>';
+    return;
+  }
+
+  var lifetime=orders.reduce(function(s,o){return s+o.total},0);
+  var rpmLife=orders.filter(function(o){return o.unit==="Restaurant"}).reduce(function(s,o){return s+o.total},0);
+  var bakLife=orders.filter(function(o){return o.unit==="Bakery"}).reduce(function(s,o){return s+o.total},0);
+  var ytdOrders=orders.filter(function(o){return yearKey(o.date)===yearKey(new Date())});
+  var ytdSpend=ytdOrders.reduce(function(s,o){return s+o.total},0);
+
+  // Category spend
+  var catSpend={};
+  orders.forEach(function(o){
+    o.items.forEach(function(i){
+      var p=state.products.find(function(p){return p.id===i.id});
+      var cat=p?p.category:"Other";
+      catSpend[cat]=(catSpend[cat]||0)+i.subtotal;
+    });
+  });
+  var catEntries=Object.entries(catSpend).sort(function(a,b){return b[1]-a[1]});
+  var maxCat=catEntries.length?catEntries[0][1]:1;
+
+  // Top SKUs by quantity
+  var skuQty={};
+  orders.forEach(function(o){
+    o.items.forEach(function(i){
+      skuQty[i.name]=(skuQty[i.name]||0)+i.qty;
+    });
+  });
+  var skuEntries=Object.entries(skuQty).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
+
+  // Monthly spend by unit
+  var monthRpm={};
+  var monthBak={};
+  orders.forEach(function(o){
+    var mk=monthKey(o.date);
+    if(o.unit==="Restaurant") monthRpm[mk]=(monthRpm[mk]||0)+o.total;
+    else monthBak[mk]=(monthBak[mk]||0)+o.total;
+  });
+  var allMonths=Array.from(new Set(Object.keys(monthRpm).concat(Object.keys(monthBak)))).sort().slice(-6);
+  var maxMonth=Math.max.apply(null,allMonths.map(function(m){return(monthRpm[m]||0)+(monthBak[m]||0)})||[1]);
+
+  var html='<div class="wrap-md"><div class="pre">Garden Admin</div><div class="h1">Dashboard</div>'+
+
+    '<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:40px">'+
+    '<div class="stat-card"><div class="stat-label">Total Lifetime</div><div class="stat-value">'+fmt(lifetime)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">YTD Spend</div><div class="stat-value">'+fmt(ytdSpend)+'</div><div class="stat-sub">'+ytdOrders.length+' orders</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Restaurant</div><div class="stat-value">'+fmt(rpmLife)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Bakery</div><div class="stat-value">'+fmt(bakLife)+'</div></div>'+
+    '</div>'+
+
+    // Category spend
+    '<div style="margin-bottom:48px">'+
+    '<div class="pre">Spend by Category</div>'+
+    '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
+    catEntries.map(function(e){
+      var pct=Math.round((e[1]/maxCat)*100);
+      return '<div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
+        '<span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
+        '<div style="background:var(--border);height:6px;border-radius:3px">'+
+        '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
+    }).join("")+"</div></div>"+
+
+    // Top SKUs
+    '<div style="margin-bottom:48px">'+
+    '<div class="pre">Top Items by Quantity Ordered</div>'+
+    '<div style="display:flex;flex-direction:column;gap:6px;margin-top:16px">'+
+    skuEntries.map(function(e){
+      var p=state.products.find(function(p){return p.name===e[0]});
+      var unit=p?p.unit:"";
+      return '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--card);border:1px solid var(--border);font-size:13px">'+
+        '<span>'+e[0]+'</span>'+
+        '<span style="color:var(--accent);font-family:Georgia,serif">'+e[1]+' '+unit+'</span></div>';
+    }).join("")+"</div></div>"+
+
+    // Monthly trend
+    (allMonths.length>1?
+    '<div style="margin-bottom:48px">'+
+    '<div class="pre">Monthly Spend — Restaurant vs Bakery</div>'+
+    '<div style="display:flex;align-items:flex-end;gap:8px;margin-top:16px;height:140px">'+
+    allMonths.map(function(m){
+      var rpm=monthRpm[m]||0;
+      var bak=monthBak[m]||0;
+      var total=rpm+bak;
+      var pct=Math.round((total/maxMonth)*100);
+      var rpmPct=total>0?Math.round((rpm/total)*100):0;
+      var label=new Date(m.split("-")[0],parseInt(m.split("-")[1])-1,1).toLocaleDateString("en-CA",{month:"short"});
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
+        '<div style="font-size:10px;color:var(--muted)">'+fmt(total)+'</div>'+
+        '<div style="flex:1;width:100%;display:flex;align-items:flex-end">'+
+        '<div style="width:100%;height:'+pct+'%;min-height:4px;border-radius:2px 2px 0 0;overflow:hidden;display:flex;flex-direction:column">'+
+        '<div style="background:var(--accent);flex:'+rpmPct+'"></div>'+
+        '<div style="background:#5a4a2a;flex:'+(100-rpmPct)+'"></div>'+
+        '</div></div>'+
+        '<div style="font-size:10px;color:var(--muted)">'+label+'</div></div>';
+    }).join("")+
+    '</div>'+
+    '<div style="display:flex;gap:16px;margin-top:12px;font-size:11px;color:var(--muted)">'+
+    '<span><span style="display:inline-block;width:10px;height:10px;background:var(--accent);border-radius:2px;margin-right:4px"></span>Restaurant</span>'+
+    '<span><span style="display:inline-block;width:10px;height:10px;background:#5a4a2a;border-radius:2px;margin-right:4px"></span>Bakery</span>'+
+    '</div></div>':"")+"</div>";
+
+  document.getElementById("app-content").innerHTML=html;
 }
 
 // Auto-login if previously authenticated
