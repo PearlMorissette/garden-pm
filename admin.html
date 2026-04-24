@@ -30,7 +30,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .btn-secondary{background:transparent;color:var(--cream);border:1px solid var(--border);padding:11px 24px;font-size:11px;letter-spacing:2px;text-transform:uppercase}
 .btn-danger{background:transparent;color:#c44;border:1px solid #c44;padding:8px 20px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase}
 .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px}
-.admin-row{display:grid;grid-template-columns:24px 1fr 120px 80px 60px;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center}
+.admin-row{display:grid;grid-template-columns:24px 1fr 80px 60px;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center}
 .dot{width:10px;height:10px;border-radius:50%;margin:0 auto}
 .tog{font-size:10px;font-weight:700;width:48px;padding:6px 0;border:1px solid;text-align:center}
 .tog-on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
@@ -225,8 +225,8 @@ function renderAvailability(){
     cats.map(function(c){
       return '<button class="pill'+(state.adminCat===c?" active":"")+'" onclick="state.adminCat=\''+c+'\';renderAvailability()">'+c+"</button>";
     }).join("")+"</div>"+
-    '<div style="display:grid;grid-template-columns:24px 1fr 120px 80px 60px;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">'+
-    '<div></div><div>Product</div><div>Note</div><div style="text-align:center">Available QTY</div><div></div></div>';
+    '<div style="display:grid;grid-template-columns:24px 1fr 80px 60px;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">'+
+    '<div></div><div>Product</div><div style="text-align:center">Available QTY</div><div></div></div>';
 
   filtered.forEach(function(p){
     var av=state.availability[String(p.id)]||{on:false,note:"",max:0,remaining:null};
@@ -246,8 +246,6 @@ function renderAvailability(){
       '<div style="font-size:11px;color:var(--muted)">'+p.category+" · "+fmt(p.price)+"/"+p.unit+'</div>'+
       remainingText+
       '</div>'+
-      '<input class="field-input" style="margin:0;opacity:'+(av.on?1:0.45)+';font-size:11px;padding:6px 10px" '+
-      'placeholder="Note" value="'+(av.note||"")+'" onchange="setNote('+p.id+',this.value)">'+
       '<input class="max-input" type="number" min="0" placeholder="0" value="'+(max||"")+'" onchange="setMax('+p.id+',this.value)" title="Available QTY">'+
       '<button class="tog '+(av.on?"tog-on":"tog-off")+'" onclick="toggleAvail('+p.id+')">'+(av.on?"ON":"OFF")+"</button>"+
       "</div>";
