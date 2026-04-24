@@ -29,22 +29,27 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .field-input:focus{border-color:var(--accent)}
 .field-textarea{width:100%;background:transparent;border:1px solid var(--border);color:var(--cream);padding:10px 14px;font-size:13px;outline:none;resize:vertical;height:80px}
 .field-textarea:focus{border-color:var(--accent)}
-.btn-primary{background:var(--accent);color:var(--bg);border:none;padding:11px 24px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.btn-primary{background:var(--accent);color:var(--bg);border:none;padding:11px 24px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;transition:opacity .2s}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed}
 .btn-secondary{background:transparent;color:var(--cream);border:1px solid var(--border);padding:11px 24px;font-size:11px;letter-spacing:2px;text-transform:uppercase}
 .btn-full{width:100%;padding:14px 0;font-size:12px}
 .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px}
 .search-input{background:var(--card);border:1px solid var(--border);color:var(--cream);padding:10px 14px;font-size:13px;outline:none;width:100%;max-width:280px;margin-bottom:16px}
 .table-header{display:grid;padding:8px 12px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
-.product-grid{grid-template-columns:1fr 90px 70px 80px}
+.product-grid{grid-template-columns:1fr 90px 70px 110px}
 .table-row{padding:10px 12px;border-bottom:1px solid var(--border);transition:background .15s}
 .table-row:hover{background:var(--card)}
-.product-row{display:grid;grid-template-columns:1fr 90px 70px 80px;align-items:center}
+.product-row{display:grid;grid-template-columns:1fr 90px 70px 110px;align-items:center}
 .p-name{font-size:13px}.p-cat{font-size:11px;color:var(--muted)}.p-note{font-size:11px;color:var(--accent);margin-top:2px}
+.p-remaining{font-size:11px;color:var(--accent);margin-top:2px}
 .p-price{text-align:right;font-family:Georgia,serif;font-size:15px}
 .p-unit{text-align:right;font-size:11px;color:var(--muted)}
-.qty-ctrl{display:flex;align-items:center;justify-content:flex-end;gap:8px}
-.qty-btn{background:transparent;border:1px solid var(--border);color:var(--cream);width:24px;height:24px;font-size:14px;display:flex;align-items:center;justify-content:center}
+.qty-ctrl{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+.qty-btn{background:transparent;border:1px solid var(--border);color:var(--cream);width:24px;height:24px;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .qty-btn.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.qty-btn:disabled{opacity:0.3;cursor:not-allowed}
+.qty-input{background:transparent;border:1px solid var(--border);color:var(--cream);width:44px;height:24px;text-align:center;font-size:12px;outline:none;padding:0 4px}
+.qty-input:focus{border-color:var(--accent)}
 .qty-num{font-size:13px;min-width:16px;text-align:center}
 .row-sel{background:#161510}
 .checkout-row{display:grid;grid-template-columns:1fr 90px 80px 80px;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center}
@@ -65,7 +70,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){
-  .product-grid,.product-row{grid-template-columns:1fr 70px 50px 70px}
+  .product-grid,.product-row{grid-template-columns:1fr 70px 50px 100px}
   .checkout-row{grid-template-columns:1fr 70px 70px 70px}
   nav{padding:12px 16px}
   .wrap,.wrap-sm,.wrap-md{padding:28px 16px}
@@ -78,6 +83,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 <script>
 var API = "https://garden-pm-proxy-0a2d338d45e9.herokuapp.com";
 var UNIT_KEY = "gpm_unit";
+var CART_KEY = "gpm_cart";
+var PROD_CACHE_KEY = "gpm_products_cache";
 
 var state = {
   screen: "entry",
@@ -108,12 +115,24 @@ function api(params){
   return fetch(API+"?"+params).then(function(r){return r.json()});
 }
 
+function saveCart(){
+  try{localStorage.setItem(CART_KEY+"_"+state.unit, JSON.stringify(state.cart))}catch(e){}
+}
+
+function loadCart(){
+  try{
+    var saved=localStorage.getItem(CART_KEY+"_"+state.unit);
+    state.cart=saved?JSON.parse(saved):{};
+  }catch(e){state.cart={}}
+}
+
 function render(){
   var app=document.getElementById("app");
   if(state.screen==="entry") app.innerHTML=entryHTML();
   else if(state.screen==="client") app.innerHTML=navHTML()+clientHTML();
   else if(state.screen==="checkout") app.innerHTML=navHTML()+checkoutHTML();
   else if(state.screen==="history") app.innerHTML=navHTML()+historyHTML();
+  else if(state.screen==="dashboard") app.innerHTML=navHTML()+dashboardHTML();
 }
 
 function go(screen){state.screen=screen;render()}
@@ -141,13 +160,25 @@ function selectUnit(unit){
   try{localStorage.setItem(UNIT_KEY,unit)}catch(e){}
   state.catFilter="All";
   state.search="";
+  loadCart();
   showLoading("Loading this week...");
+
+  // Load products from cache first for speed
+  try{
+    var cached=localStorage.getItem(PROD_CACHE_KEY);
+    if(cached) state.products=JSON.parse(cached);
+  }catch(e){}
+
+  // Always fetch fresh availability, products in parallel
   Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
 }
 
 function loadProducts(){
   return api("action=getProducts").then(function(data){
-    if(data.products) state.products=data.products;
+    if(data.products){
+      state.products=data.products;
+      try{localStorage.setItem(PROD_CACHE_KEY,JSON.stringify(data.products))}catch(e){}
+    }
   });
 }
 
@@ -174,13 +205,23 @@ function navHTML(){
     '<span style="color:var(--muted);font-size:12px;letter-spacing:1px;margin-right:4px">'+state.unit+'</span>'+
     '<button class="pill'+(state.screen==="client"?" active":"")+'" onclick="go(\'client\')">Catalogue</button>'+
     '<button class="pill'+(state.screen==="history"?" active":"")+'" onclick="loadOrders().then(function(){go(\'history\')})">History</button>'+
+    '<button class="pill'+(state.screen==="dashboard"?" active":"")+'" onclick="loadOrders().then(function(){go(\'dashboard\')})">Dashboard</button>'+
     '<button class="pill'+(cc>0?" cart-active":"")+'" onclick="go(\'checkout\')">Order'+(cc>0?" ("+cc+")":"")+' </button>'+
     '</div></nav>';
 }
 
+function getRemaining(p){
+  var av=state.availability[String(p.id)];
+  if(!av) return null;
+  if(av.remaining===null||av.remaining===undefined) return null;
+  var inCart=state.cart[p.id]||0;
+  return Math.max(0, av.remaining - inCart);
+}
+
 function clientHTML(){
   var available=state.products.filter(function(p){
-    return state.availability[String(p.id)]&&state.availability[String(p.id)].on;
+    var av=state.availability[String(p.id)];
+    return av&&av.on;
   });
   var cats=["All"].concat(Array.from(new Set(available.map(function(p){return p.category}))));
   if(state.catFilter!=="All"&&cats.indexOf(state.catFilter)<0) state.catFilter="All";
@@ -205,17 +246,23 @@ function clientHTML(){
     filtered.forEach(function(p){
       var av=state.availability[String(p.id)];
       var qty=state.cart[p.id]||0;
+      var remaining=getRemaining(p);
+      var atMax=remaining!==null&&qty>=remaining+qty; // already at max considering cart
+      var maxQty=remaining!==null?remaining:999;
+
       html+='<div class="table-row product-row'+(qty>0?" row-sel":"")+'" id="pr'+p.id+'">'+
         '<div>'+
         '<div class="p-name">'+p.name+'</div>'+
         (av&&av.note?'<div class="p-note">'+av.note+'</div>':'')+
         '<div class="p-cat">'+p.category+'</div>'+
+        (remaining!==null?'<div class="p-remaining">'+remaining+' '+p.unit+' remaining</div>':'')+
         '</div>'+
         '<div class="p-price">'+fmt(p.price)+'</div>'+
         '<div class="p-unit">'+p.unit+'</div>'+
         '<div class="qty-ctrl">'+
-        (qty>0?'<button class="qty-btn" onclick="updateCart('+p.id+',-1)">-</button><span class="qty-num">'+qty+'</span>':'')+
-        '<button class="qty-btn'+(qty>0?" on":"")+'" onclick="updateCart('+p.id+',1)">+</button>'+
+        (qty>0?'<button class="qty-btn" onclick="updateCart('+p.id+',-1,'+maxQty+')">-</button>':'')+
+        '<input class="qty-input" type="number" min="0" max="'+maxQty+'" value="'+(qty||"")+'" placeholder="0" onchange="setCartQty('+p.id+',this.value,'+maxQty+')" onclick="this.select()">'+
+        '<button class="qty-btn'+(qty>0?" on":"")+(maxQty===0?" disabled":"")+'" onclick="updateCart('+p.id+',1,'+maxQty+')" '+(maxQty===0?"disabled":"")+'>+</button>'+
         '</div></div>';
     });
     html+='<div id="prod-count" style="padding:16px 0;color:var(--muted);font-size:12px">'+filtered.length+" products shown</div>";
@@ -226,7 +273,8 @@ function clientHTML(){
 function doSearch(val){
   state.search=val;
   var available=state.products.filter(function(p){
-    return state.availability[String(p.id)]&&state.availability[String(p.id)].on;
+    var av=state.availability[String(p.id)];
+    return av&&av.on;
   });
   var filtered=available.filter(function(p){
     if(state.catFilter!=="All"&&p.category!==state.catFilter) return false;
@@ -241,9 +289,21 @@ function doSearch(val){
   if(count) count.textContent=filtered.length+" products shown";
 }
 
-function updateCart(id,delta){
-  var n=Math.max(0,(state.cart[id]||0)+delta);
+function updateCart(id,delta,maxQty){
+  var cur=state.cart[id]||0;
+  var n=Math.max(0,cur+delta);
+  if(maxQty!==undefined&&maxQty!==null) n=Math.min(n,maxQty);
   if(n===0) delete state.cart[id]; else state.cart[id]=n;
+  saveCart();
+  go("client");
+}
+
+function setCartQty(id,val,maxQty){
+  var n=parseInt(val)||0;
+  n=Math.max(0,n);
+  if(maxQty!==undefined&&maxQty!==null) n=Math.min(n,maxQty);
+  if(n===0) delete state.cart[id]; else state.cart[id]=n;
+  saveCart();
   go("client");
 }
 
@@ -261,12 +321,14 @@ function checkoutHTML(){
     html+='<div class="table-header" style="grid-template-columns:1fr 90px 80px 80px">'+
       '<div>Item</div><div style="text-align:center">Qty</div><div style="text-align:right">Unit</div><div style="text-align:right">Total</div></div>';
     items.forEach(function(i){
+      var av=state.availability[String(i.id)];
+      var maxQty=av&&av.remaining!==null?av.remaining:999;
       html+='<div class="table-row checkout-row">'+
         '<div style="font-size:13px">'+i.name+'</div>'+
         '<div style="display:flex;align-items:center;justify-content:center;gap:6px">'+
         '<button class="qty-btn" onclick="updateCartCheckout('+i.id+',-1)">-</button>'+
         '<span class="qty-num">'+i.qty+'</span>'+
-        '<button class="qty-btn" onclick="updateCartCheckout('+i.id+',1)">+</button>'+
+        '<button class="qty-btn" onclick="updateCartCheckout('+i.id+',1,'+maxQty+')">+</button>'+
         '</div>'+
         '<div style="text-align:right;font-size:11px;color:var(--muted)">'+i.qty+' '+i.unit+'</div>'+
         '<div style="text-align:right;font-family:Georgia,serif;font-size:15px">'+fmt(i.price*i.qty)+'</div></div>';
@@ -276,18 +338,23 @@ function checkoutHTML(){
       '<span style="font-family:Georgia,serif;font-size:28px;font-weight:300">'+fmt(total)+'</span></div>'+
       '<label class="field-label">Note to Garden (optional)</label>'+
       '<textarea class="field-textarea" id="order-note" placeholder="Timing, substitutions..."></textarea>'+
-      '<button class="btn-primary btn-full" style="margin-top:16px" onclick="submitOrder()">Submit Order</button>';
+      '<button class="btn-primary btn-full" style="margin-top:16px" id="submit-btn" onclick="submitOrder()">Submit Order</button>';
   }
   return html+"</div>";
 }
 
-function updateCartCheckout(id,delta){
-  var n=Math.max(0,(state.cart[id]||0)+delta);
+function updateCartCheckout(id,delta,maxQty){
+  var cur=state.cart[id]||0;
+  var n=Math.max(0,cur+delta);
+  if(maxQty!==undefined) n=Math.min(n,maxQty);
   if(n===0) delete state.cart[id]; else state.cart[id]=n;
+  saveCart();
   go("checkout");
 }
 
 function submitOrder(){
+  var btn=document.getElementById("submit-btn");
+  if(btn){btn.disabled=true;btn.textContent="Submitting...";}
   var items=Object.entries(state.cart).filter(function(e){return e[1]>0}).map(function(e){
     var p=state.products.find(function(p){return p.id===Number(e[0])});
     return{id:p.id,name:p.name,qty:e[1],unit:p.unit,price:p.price,subtotal:p.price*e[1]};
@@ -298,11 +365,16 @@ function submitOrder(){
   api("action=submitOrder&data="+encodeURIComponent(JSON.stringify(order))).then(function(r){
     if(r.success){
       state.cart={};
+      saveCart();
       showToast("Order submitted");
-      go("client");
+      loadAvailability().then(function(){go("client")});
     } else {
       showToast("Error — try again");
+      if(btn){btn.disabled=false;btn.textContent="Submit Order";}
     }
+  }).catch(function(){
+    showToast("Error — try again");
+    if(btn){btn.disabled=false;btn.textContent="Submit Order";}
   });
 }
 
@@ -327,37 +399,122 @@ function historyHTML(){
       return '<button class="pill'+(state.historyFilter===x[0]?" active":"")+'" onclick="state.historyFilter=\''+x[0]+'\';go(\'history\')">'+x[1]+"</button>";
     }).join("")+"</div>";
   if(!filtered.length) html+='<div class="empty">No orders in this period.</div>';
-  else filtered.forEach(function(o){html+=orderCardHTML(o)});
+  else filtered.forEach(function(o){html+=orderCardHTML(o,"history")});
   return html+"</div>";
 }
 
-function orderCardHTML(o){
+function dashboardHTML(){
+  var orders=state.orders;
+  if(!orders.length) return '<div class="wrap"><div class="pre">'+state.unit+'</div><div class="h1">Dashboard</div><div class="empty">No orders yet.</div></div>';
+
+  // Category spend
+  var catSpend={};
+  orders.forEach(function(o){
+    o.items.forEach(function(i){
+      var p=state.products.find(function(p){return p.id===i.id});
+      var cat=p?p.category:"Other";
+      catSpend[cat]=(catSpend[cat]||0)+i.subtotal;
+    });
+  });
+  var catEntries=Object.entries(catSpend).sort(function(a,b){return b[1]-a[1]});
+  var maxCat=catEntries.length?catEntries[0][1]:1;
+
+  // Top SKUs by quantity
+  var skuQty={};
+  orders.forEach(function(o){
+    o.items.forEach(function(i){
+      skuQty[i.name]=(skuQty[i.name]||0)+i.qty;
+    });
+  });
+  var skuEntries=Object.entries(skuQty).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
+
+  // Monthly spend
+  var monthSpend={};
+  orders.forEach(function(o){
+    var mk=monthKey(o.date);
+    monthSpend[mk]=(monthSpend[mk]||0)+o.total;
+  });
+  var monthEntries=Object.entries(monthSpend).sort(function(a,b){return a[0]>b[0]?1:-1}).slice(-6);
+  var maxMonth=monthEntries.length?Math.max.apply(null,monthEntries.map(function(e){return e[1]})):1;
+
+  var lifetime=orders.reduce(function(s,o){return s+o.total},0);
+  var ytdOrders=orders.filter(function(o){return yearKey(o.date)===yearKey(new Date())});
+  var ytdSpend=ytdOrders.reduce(function(s,o){return s+o.total},0);
+
+  var html='<div class="wrap-md"><div class="pre">'+state.unit+'</div><div class="h1">Dashboard</div>'+
+    '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:40px">'+
+    '<div class="stat-card"><div class="stat-label">Lifetime</div><div class="stat-value">'+fmt(lifetime)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">YTD Spend</div><div class="stat-value">'+fmt(ytdSpend)+'</div><div class="stat-sub">'+ytdOrders.length+' orders</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Total Orders</div><div class="stat-value">'+orders.length+'</div></div>'+
+    '</div>'+
+
+    // Spend by category
+    '<div style="margin-bottom:48px">'+
+    '<div class="pre">Spend by Category</div>'+
+    '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
+    catEntries.map(function(e){
+      var pct=Math.round((e[1]/maxCat)*100);
+      return '<div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
+        '<span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
+        '<div style="background:var(--border);height:6px;border-radius:3px">'+
+        '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
+    }).join("")+"</div></div>"+
+
+    // Top SKUs
+    '<div style="margin-bottom:48px">'+
+    '<div class="pre">Top Items by Quantity</div>'+
+    '<div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">'+
+    skuEntries.map(function(e){
+      var p=state.products.find(function(p){return p.name===e[0]});
+      var unit=p?p.unit:"";
+      return '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--card);border:1px solid var(--border);font-size:13px">'+
+        '<span>'+e[0]+'</span>'+
+        '<span style="color:var(--accent);font-family:Georgia,serif">'+e[1]+' '+unit+'</span></div>';
+    }).join("")+"</div></div>"+
+
+    // Monthly trend
+    (monthEntries.length>1?
+    '<div style="margin-bottom:48px">'+
+    '<div class="pre">Monthly Spend</div>'+
+    '<div style="display:flex;align-items:flex-end;gap:8px;margin-top:16px;height:120px">'+
+    monthEntries.map(function(e){
+      var pct=Math.round((e[1]/maxMonth)*100);
+      var label=e[0].split("-");
+      var mon=new Date(parseInt(label[0]),parseInt(label[1])-1,1).toLocaleDateString("en-CA",{month:"short"});
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
+        '<div style="font-size:10px;color:var(--accent)">'+fmt(e[1])+'</div>'+
+        '<div style="flex:1;width:100%;display:flex;align-items:flex-end">'+
+        '<div style="background:var(--accent);width:100%;height:'+pct+'%;min-height:4px;border-radius:2px 2px 0 0"></div></div>'+
+        '<div style="font-size:10px;color:var(--muted)">'+mon+'</div></div>';
+    }).join("")+
+    '</div></div>':"")+"</div>";
+
+  return html;
+}
+
+function orderCardHTML(o,screen){
   var ds=new Date(o.date).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric",year:"numeric"});
   var open=state.openOrders[o.id];
   return '<div class="order-card">'+
-    '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];go(\'history\')">'+
-    '<div>'+
-    '<div style="font-size:13px">'+ds+'</div>'+
-    '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+" items</div>"+
-    '</div>'+
+    '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];go(\''+screen+'\')">'+
+    '<div><div style="font-size:13px">'+ds+'</div>'+
+    '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+" items</div></div>"+
     '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+"</div>"+
-    '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+"</div>"+
-    "</div>"+
-    (open?
-      '<div class="order-detail">'+
-      o.items.map(function(i){
-        return '<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>';
-      }).join("")+
-      (o.note?'<div class="order-note">'+o.note+"</div>":"")+
-      "</div>":"")+
+    '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+"</div></div>"+
+    (open?'<div class="order-detail">'+
+    o.items.map(function(i){return'<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>'}).join("")+
+    (o.note?'<div class="order-note">'+o.note+"</div>":"")+
+    "</div>":"")+
     "</div>";
 }
 
-// On load — restore unit from localStorage
+// Init — restore unit from localStorage
 var savedUnit=null;
 try{savedUnit=localStorage.getItem(UNIT_KEY)}catch(e){}
 if(savedUnit){
   state.unit=savedUnit;
+  loadCart();
   showLoading("Loading...");
   Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
 } else {
