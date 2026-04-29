@@ -19,6 +19,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .pill{background:transparent;color:var(--muted);border:1px solid var(--border);padding:6px 16px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s}
 .pill.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 .pill.cart-active{color:var(--accent);border-color:var(--accent)}
+.pill:disabled{opacity:0.5;cursor:not-allowed}
 .wrap{max-width:900px;margin:0 auto;padding:40px 24px}
 .wrap-sm{max-width:600px;margin:0 auto;padding:40px 24px}
 .wrap-md{max-width:800px;margin:0 auto;padding:40px 24px}
@@ -50,7 +51,6 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .qty-btn:disabled{opacity:0.3;cursor:not-allowed}
 .qty-input{background:transparent;border:1px solid var(--border);color:var(--cream);width:44px;height:24px;text-align:center;font-size:12px;outline:none;padding:0 4px}
 .qty-input:focus{border-color:var(--accent)}
-.qty-num{font-size:13px;min-width:16px;text-align:center}
 .row-sel{background:#161510}
 .checkout-row{display:grid;grid-template-columns:1fr 90px 80px 80px;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center}
 .total-bar{border-top:1px solid var(--accent);padding-top:20px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
@@ -69,6 +69,9 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .loading{text-align:center;padding:80px 24px;color:var(--muted);font-size:13px;letter-spacing:1px}
 .spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
 @keyframes spin{to{transform:rotate(360deg)}}
+.auth-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.auth-card{background:var(--card);border:1px solid var(--border);padding:40px 36px;width:100%;max-width:340px}
+.auth-error{color:#c44;font-size:12px;margin-bottom:12px;display:none}
 @media(max-width:600px){
   .product-grid,.product-row{grid-template-columns:1fr 70px 50px 100px}
   .checkout-row{grid-template-columns:1fr 70px 70px 70px}
@@ -83,14 +86,17 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 <script>
 var API = "https://garden-pm-proxy-0a2d338d45e9.herokuapp.com";
 var UNIT_KEY = "gpm_unit";
+var ACCT_KEY = "gpm_account";
 var CART_KEY = "gpm_cart";
 var PROD_CACHE_KEY = "gpm_products_cache";
 
 var state = {
   screen: "entry",
   unit: null,
+  accountName: null,
   products: [],
   availability: {},
+  accounts: [],
   cart: {},
   orders: [],
   search: "",
@@ -106,8 +112,7 @@ function yearKey(d){return ""+new Date(d).getFullYear()}
 
 function showToast(msg){
   var t=document.getElementById("toast");
-  t.textContent=msg;
-  t.classList.add("show");
+  t.textContent=msg;t.classList.add("show");
   setTimeout(function(){t.classList.remove("show")},2500);
 }
 
@@ -116,19 +121,19 @@ function api(params){
 }
 
 function saveCart(){
-  try{localStorage.setItem(CART_KEY+"_"+state.unit, JSON.stringify(state.cart))}catch(e){}
+  var key=CART_KEY+"_"+(state.accountName||state.unit);
+  try{localStorage.setItem(key,JSON.stringify(state.cart))}catch(e){}
 }
 
 function loadCart(){
-  try{
-    var saved=localStorage.getItem(CART_KEY+"_"+state.unit);
-    state.cart=saved?JSON.parse(saved):{};
-  }catch(e){state.cart={}}
+  var key=CART_KEY+"_"+(state.accountName||state.unit);
+  try{var s=localStorage.getItem(key);state.cart=s?JSON.parse(s):{}}catch(e){state.cart={}}
 }
 
 function render(){
   var app=document.getElementById("app");
   if(state.screen==="entry") app.innerHTML=entryHTML();
+  else if(state.screen==="wholesale-auth") app.innerHTML=wholesaleAuthHTML();
   else if(state.screen==="client") app.innerHTML=navHTML()+clientHTML();
   else if(state.screen==="checkout") app.innerHTML=navHTML()+checkoutHTML();
   else if(state.screen==="history") app.innerHTML=navHTML()+historyHTML();
@@ -152,24 +157,62 @@ function entryHTML(){
     '<div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px">'+
     '<button style="background:var(--card);border:1px solid var(--border);color:var(--cream);padding:18px 24px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:inherit" onclick="selectUnit(\'Restaurant\')">Restaurant</button>'+
     '<button style="background:var(--card);border:1px solid var(--border);color:var(--cream);padding:18px 24px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:inherit" onclick="selectUnit(\'Bakery\')">Bakery</button>'+
+    '<button style="background:var(--card);border:1px solid var(--border);color:var(--cream);padding:18px 24px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:inherit" onclick="goWholesaleAuth()">Wholesale</button>'+
     '</div></div>';
+}
+
+function wholesaleAuthHTML(){
+  return '<div class="auth-wrap">'+
+    '<div class="auth-card">'+
+    '<div class="pre">Wholesale</div>'+
+    '<div style="font-family:Georgia,serif;font-size:26px;font-weight:300;margin-bottom:28px">Sign In</div>'+
+    '<label class="field-label">Account Name</label>'+
+    '<input class="field-input" id="ws-name" placeholder="Your account name" onkeydown="if(event.key===\'Enter\')tryWholesale()">'+
+    '<label class="field-label">Passcode</label>'+
+    '<input class="field-input" type="password" id="ws-pass" placeholder="........" onkeydown="if(event.key===\'Enter\')tryWholesale()">'+
+    '<div id="ws-err" class="auth-error">Account not found or incorrect passcode</div>'+
+    '<div style="display:flex;gap:10px;margin-top:8px">'+
+    '<button class="btn-primary" onclick="tryWholesale()">Sign In</button>'+
+    '<button class="btn-secondary" onclick="go(\'entry\')">Back</button>'+
+    '</div></div></div>';
+}
+
+function goWholesaleAuth(){
+  showLoading("Loading...");
+  api("action=getAccounts").then(function(data){
+    if(data.accounts) state.accounts=data.accounts;
+    go("wholesale-auth");
+  });
+}
+
+function tryWholesale(){
+  var name=document.getElementById("ws-name")?document.getElementById("ws-name").value.trim():"";
+  var pass=document.getElementById("ws-pass")?document.getElementById("ws-pass").value:"";
+  var match=state.accounts.find(function(a){
+    return a.name.toLowerCase()===name.toLowerCase()&&a.passcode===pass;
+  });
+  if(match){
+    state.accountName=match.name;
+    state.unit=match.name;
+    try{localStorage.setItem(UNIT_KEY,"wholesale");localStorage.setItem(ACCT_KEY,match.name)}catch(e){}
+    loadCart();
+    showLoading("Loading this week...");
+    Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
+  } else {
+    var err=document.getElementById("ws-err");
+    if(err) err.style.display="block";
+  }
 }
 
 function selectUnit(unit){
   state.unit=unit;
-  try{localStorage.setItem(UNIT_KEY,unit)}catch(e){}
+  state.accountName=null;
+  try{localStorage.setItem(UNIT_KEY,unit);localStorage.removeItem(ACCT_KEY)}catch(e){}
   state.catFilter="All";
   state.search="";
   loadCart();
   showLoading("Loading this week...");
-
-  // Load products from cache first for speed
-  try{
-    var cached=localStorage.getItem(PROD_CACHE_KEY);
-    if(cached) state.products=JSON.parse(cached);
-  }catch(e){}
-
-  // Always fetch fresh availability, products in parallel
+  try{var c=localStorage.getItem(PROD_CACHE_KEY);if(c)state.products=JSON.parse(c)}catch(e){}
   Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
 }
 
@@ -189,33 +232,39 @@ function loadAvailability(){
 }
 
 function loadOrders(){
-  return api("action=getOrders&unit="+state.unit).then(function(data){
+  return api("action=getOrders&unit="+encodeURIComponent(state.unit)).then(function(data){
     if(data.orders) state.orders=data.orders;
   });
 }
 
 function navHTML(){
   var cc=Object.values(state.cart).reduce(function(s,q){return s+q},0);
+  var label=state.accountName||state.unit;
   return '<nav>'+
     '<div class="logo" onclick="go(\'entry\')">'+
     '<div class="logo-top">GARDEN</div>'+
     '<div class="logo-sub">Pearl Morissette</div>'+
     '</div>'+
     '<div class="nav-right">'+
-    '<span style="color:var(--muted);font-size:12px;letter-spacing:1px;margin-right:4px">'+state.unit+'</span>'+
-    '<button class="pill'+(state.screen==="client"?" active":"")+'" onclick="go(\'client\')">Catalogue</button>'+
-    '<button class="pill'+(state.screen==="history"?" active":"")+'" onclick="loadOrders().then(function(){go(\'history\')})">History</button>'+
-    '<button class="pill'+(state.screen==="dashboard"?" active":"")+'" onclick="loadOrders().then(function(){go(\'dashboard\')})">Dashboard</button>'+
+    '<span style="color:var(--muted);font-size:12px;letter-spacing:1px;margin-right:4px">'+label+'</span>'+
+    '<button class="pill'+(state.screen==="client"?" active":"")+'" id="nav-cat" onclick="navTo(\'client\')">Catalogue</button>'+
+    '<button class="pill'+(state.screen==="history"?" active":"")+'" id="nav-hist" onclick="navTo(\'history\')">History</button>'+
+    '<button class="pill'+(state.screen==="dashboard"?" active":"")+'" id="nav-dash" onclick="navTo(\'dashboard\')">Dashboard</button>'+
     '<button class="pill'+(cc>0?" cart-active":"")+'" onclick="go(\'checkout\')">Order'+(cc>0?" ("+cc+")":"")+' </button>'+
     '</div></nav>';
 }
 
+function navTo(screen){
+  var btn=document.getElementById("nav-"+(screen==="client"?"cat":screen==="history"?"hist":"dash"));
+  if(btn){btn.disabled=true;btn.textContent="Loading...";}
+  loadOrders().then(function(){go(screen)});
+}
+
 function getRemaining(p){
   var av=state.availability[String(p.id)];
-  if(!av) return null;
-  if(av.remaining===null||av.remaining===undefined) return null;
+  if(!av||av.remaining===null||av.remaining===undefined) return null;
   var inCart=state.cart[p.id]||0;
-  return Math.max(0, av.remaining - inCart);
+  return Math.max(0,av.remaining-inCart);
 }
 
 function clientHTML(){
@@ -236,23 +285,17 @@ function clientHTML(){
     html+='<div class="empty"><div class="empty-title">Nothing listed yet</div><p>The garden team has not set this week\'s availability.</p></div>';
   } else {
     html+='<input class="search-input" id="search-box" placeholder="Search..." value="'+state.search+'" oninput="doSearch(this.value)">'+
-      '<div class="filter-bar">'+
-      cats.map(function(c){
+      '<div class="filter-bar">'+cats.map(function(c){
         return '<button class="pill'+(state.catFilter===c?" active":"")+'" onclick="state.catFilter=\''+c+'\';go(\'client\')">'+c+"</button>";
       }).join("")+"</div>"+
-      '<div class="table-header product-grid">'+
-      '<div>Product</div><div style="text-align:right">Price</div><div style="text-align:right">Unit</div><div style="text-align:right">Qty</div>'+
-      '</div>';
+      '<div class="table-header product-grid"><div>Product</div><div style="text-align:right">Price</div><div style="text-align:right">Unit</div><div style="text-align:right">Qty</div></div>';
     filtered.forEach(function(p){
       var av=state.availability[String(p.id)];
       var qty=state.cart[p.id]||0;
       var remaining=getRemaining(p);
-      var atMax=remaining!==null&&qty>=remaining+qty; // already at max considering cart
       var maxQty=remaining!==null?remaining:999;
-
       html+='<div class="table-row product-row'+(qty>0?" row-sel":"")+'" id="pr'+p.id+'">'+
-        '<div>'+
-        '<div class="p-name">'+p.name+'</div>'+
+        '<div><div class="p-name">'+p.name+'</div>'+
         (av&&av.note?'<div class="p-note">'+av.note+'</div>':'')+
         '<div class="p-cat">'+p.category+'</div>'+
         (remaining!==null?'<div class="p-remaining">'+(remaining===0?"Sold out":remaining+" "+p.unit+" available")+'</div>':'')+
@@ -262,7 +305,7 @@ function clientHTML(){
         '<div class="qty-ctrl">'+
         (qty>0?'<button class="qty-btn" onclick="updateCart('+p.id+',-1,'+maxQty+')">-</button>':'')+
         '<input class="qty-input" type="number" min="0" max="'+maxQty+'" value="'+(qty||"")+'" placeholder="0" onchange="setCartQty('+p.id+',this.value,'+maxQty+')" onclick="this.select()">'+
-        '<button class="qty-btn'+(qty>0?" on":"")+(maxQty===0?" disabled":"")+'" onclick="updateCart('+p.id+',1,'+maxQty+')" '+(maxQty===0?"disabled":"")+'>+</button>'+
+        '<button class="qty-btn'+(qty>0?" on":"")+(maxQty===0?" disabled":"")+'" onclick="updateCart('+p.id+',1,'+maxQty+')"'+(maxQty===0?' disabled':'')+'>+</button>'+
         '</div></div>';
     });
     html+='<div id="prod-count" style="padding:16px 0;color:var(--muted);font-size:12px">'+filtered.length+" products shown</div>";
@@ -272,10 +315,7 @@ function clientHTML(){
 
 function doSearch(val){
   state.search=val;
-  var available=state.products.filter(function(p){
-    var av=state.availability[String(p.id)];
-    return av&&av.on;
-  });
+  var available=state.products.filter(function(p){var av=state.availability[String(p.id)];return av&&av.on});
   var filtered=available.filter(function(p){
     if(state.catFilter!=="All"&&p.category!==state.catFilter) return false;
     if(val&&p.name.toLowerCase().indexOf(val.toLowerCase())<0) return false;
@@ -290,24 +330,19 @@ function doSearch(val){
 }
 
 function updateCart(id,delta,maxQty){
-  var cur=state.cart[id]||0;
-  var n=Math.max(0,cur+delta);
+  var n=Math.max(0,(state.cart[id]||0)+delta);
   if(maxQty!==undefined&&maxQty!==null) n=Math.min(n,maxQty);
   if(n===0) delete state.cart[id]; else state.cart[id]=n;
-  saveCart();
-  go("client");
+  saveCart();go("client");
 }
 
 function setCartQty(id,val,maxQty){
-  var n=parseInt(val)||0;
-  n=Math.max(0,n);
+  var n=parseInt(val)||0;n=Math.max(0,n);
   if(maxQty!==null&&maxQty!==undefined&&n>maxQty){
-    showToast("Only "+maxQty+" available — quantity adjusted");
-    n=maxQty;
+    showToast("Only "+maxQty+" available — adjusted");n=maxQty;
   }
   if(n===0) delete state.cart[id]; else state.cart[id]=n;
-  saveCart();
-  go("client");
+  saveCart();go("client");
 }
 
 function checkoutHTML(){
@@ -316,13 +351,12 @@ function checkoutHTML(){
     return{id:p.id,name:p.name,price:p.price,unit:p.unit,qty:e[1]};
   });
   var total=items.reduce(function(s,i){return s+i.price*i.qty},0);
-  var html='<div class="wrap-sm"><div class="pre">'+state.unit+'</div><div class="h1">Your Order</div>';
+  var html='<div class="wrap-sm"><div class="pre">'+(state.accountName||state.unit)+'</div><div class="h1">Your Order</div>';
   if(!items.length){
     html+='<div class="empty"><div class="empty-title">Nothing added yet</div>'+
       '<button class="btn-primary" style="margin-top:16px" onclick="go(\'client\')">Browse Catalogue</button></div>';
   } else {
-    html+='<div class="table-header" style="grid-template-columns:1fr 90px 80px 80px">'+
-      '<div>Item</div><div style="text-align:center">Qty</div><div style="text-align:right">Unit</div><div style="text-align:right">Total</div></div>';
+    html+='<div class="table-header" style="grid-template-columns:1fr 90px 80px 80px"><div>Item</div><div style="text-align:center">Qty</div><div style="text-align:right">Unit</div><div style="text-align:right">Total</div></div>';
     items.forEach(function(i){
       var av=state.availability[String(i.id)];
       var maxQty=av&&av.remaining!==null?av.remaining:999;
@@ -330,16 +364,15 @@ function checkoutHTML(){
         '<div style="font-size:13px">'+i.name+'</div>'+
         '<div style="display:flex;align-items:center;justify-content:center;gap:6px">'+
         '<button class="qty-btn" onclick="updateCartCheckout('+i.id+',-1)">-</button>'+
-        '<span class="qty-num">'+i.qty+'</span>'+
+        '<span style="font-size:13px;min-width:20px;text-align:center">'+i.qty+'</span>'+
         '<button class="qty-btn" onclick="updateCartCheckout('+i.id+',1,'+maxQty+')">+</button>'+
         '</div>'+
         '<div style="text-align:right;font-size:11px;color:var(--muted)">'+i.qty+' '+i.unit+'</div>'+
         '<div style="text-align:right;font-family:Georgia,serif;font-size:15px">'+fmt(i.price*i.qty)+'</div></div>';
     });
-    html+='<div class="total-bar">'+
-      '<span style="color:var(--muted);font-size:12px">Order Total</span>'+
+    html+='<div class="total-bar"><span style="color:var(--muted);font-size:12px">Order Total</span>'+
       '<span style="font-family:Georgia,serif;font-size:28px;font-weight:300">'+fmt(total)+'</span></div>'+
-      '<label class="field-label">Note to Garden (optional)</label>'+
+      '<label class="field-label">Note (optional)</label>'+
       '<textarea class="field-textarea" id="order-note" placeholder="Timing, substitutions..."></textarea>'+
       '<button class="btn-primary btn-full" style="margin-top:16px" id="submit-btn" onclick="submitOrder()">Submit Order</button>';
   }
@@ -347,12 +380,10 @@ function checkoutHTML(){
 }
 
 function updateCartCheckout(id,delta,maxQty){
-  var cur=state.cart[id]||0;
-  var n=Math.max(0,cur+delta);
+  var n=Math.max(0,(state.cart[id]||0)+delta);
   if(maxQty!==undefined) n=Math.min(n,maxQty);
   if(n===0) delete state.cart[id]; else state.cart[id]=n;
-  saveCart();
-  go("checkout");
+  saveCart();go("checkout");
 }
 
 function submitOrder(){
@@ -364,11 +395,11 @@ function submitOrder(){
   });
   var total=items.reduce(function(s,i){return s+i.subtotal},0);
   var note=document.getElementById("order-note")?document.getElementById("order-note").value:"";
-  var order={unit:state.unit,date:new Date().toISOString(),items:items,total:total,note:note};
+  var orderUnit=state.accountName||state.unit;
+  var order={unit:orderUnit,date:new Date().toISOString(),items:items,total:total,note:note};
   api("action=submitOrder&data="+encodeURIComponent(JSON.stringify(order))).then(function(r){
     if(r.success){
-      state.cart={};
-      saveCart();
+      state.cart={};saveCart();
       showToast("Order submitted");
       loadAvailability().then(function(){go("client")});
     } else {
@@ -382,23 +413,21 @@ function submitOrder(){
 }
 
 function historyHTML(){
-  var myOrders=state.orders;
-  var filtered=myOrders.filter(function(o){
+  var filtered=state.orders.filter(function(o){
     var now=new Date();
     if(state.historyFilter==="week") return weekKey(o.date)===weekKey(now);
     if(state.historyFilter==="month") return monthKey(o.date)===monthKey(now);
     if(state.historyFilter==="year") return yearKey(o.date)===yearKey(now);
     return true;
   });
-  var lifetime=myOrders.reduce(function(s,o){return s+o.total},0);
+  var lifetime=state.orders.reduce(function(s,o){return s+o.total},0);
   var periodSpend=filtered.reduce(function(s,o){return s+o.total},0);
-  var html='<div class="wrap-md"><div class="pre">'+state.unit+'</div><div class="h1">Order History</div>'+
+  var html='<div class="wrap-md"><div class="pre">'+(state.accountName||state.unit)+'</div><div class="h1">Order History</div>'+
     '<div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">'+
-    '<div class="stat-card"><div class="stat-label">Lifetime Spend</div><div class="stat-value">'+fmt(lifetime)+"</div></div>"+
-    '<div class="stat-card"><div class="stat-label">This Period</div><div class="stat-value">'+fmt(periodSpend)+
-    '</div><div class="stat-sub">'+filtered.length+" orders</div></div></div>"+
-    '<div class="filter-bar">'+
-    [["all","All Time"],["week","This Week"],["month","This Month"],["year","This Year"]].map(function(x){
+    '<div class="stat-card"><div class="stat-label">Lifetime Spend</div><div class="stat-value">'+fmt(lifetime)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">This Period</div><div class="stat-value">'+fmt(periodSpend)+'</div><div class="stat-sub">'+filtered.length+' orders</div></div>'+
+    '</div>'+
+    '<div class="filter-bar">'+[["all","All Time"],["week","This Week"],["month","This Month"],["year","This Year"]].map(function(x){
       return '<button class="pill'+(state.historyFilter===x[0]?" active":"")+'" onclick="state.historyFilter=\''+x[0]+'\';go(\'history\')">'+x[1]+"</button>";
     }).join("")+"</div>";
   if(!filtered.length) html+='<div class="empty">No orders in this period.</div>';
@@ -408,91 +437,59 @@ function historyHTML(){
 
 function dashboardHTML(){
   var orders=state.orders;
-  if(!orders.length) return '<div class="wrap"><div class="pre">'+state.unit+'</div><div class="h1">Dashboard</div><div class="empty">No orders yet.</div></div>';
-
-  // Category spend
-  var catSpend={};
-  orders.forEach(function(o){
-    o.items.forEach(function(i){
-      var p=state.products.find(function(p){return p.id===i.id});
-      var cat=p?p.category:"Other";
-      catSpend[cat]=(catSpend[cat]||0)+i.subtotal;
-    });
-  });
-  var catEntries=Object.entries(catSpend).sort(function(a,b){return b[1]-a[1]});
-  var maxCat=catEntries.length?catEntries[0][1]:1;
-
-  // Top SKUs by quantity
-  var skuQty={};
-  orders.forEach(function(o){
-    o.items.forEach(function(i){
-      skuQty[i.name]=(skuQty[i.name]||0)+i.qty;
-    });
-  });
-  var skuEntries=Object.entries(skuQty).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
-
-  // Monthly spend
-  var monthSpend={};
-  orders.forEach(function(o){
-    var mk=monthKey(o.date);
-    monthSpend[mk]=(monthSpend[mk]||0)+o.total;
-  });
-  var monthEntries=Object.entries(monthSpend).sort(function(a,b){return a[0]>b[0]?1:-1}).slice(-6);
-  var maxMonth=monthEntries.length?Math.max.apply(null,monthEntries.map(function(e){return e[1]})):1;
-
+  if(!orders.length) return '<div class="wrap"><div class="pre">'+(state.accountName||state.unit)+'</div><div class="h1">Dashboard</div><div class="empty">No orders yet.</div></div>';
   var lifetime=orders.reduce(function(s,o){return s+o.total},0);
   var ytdOrders=orders.filter(function(o){return yearKey(o.date)===yearKey(new Date())});
   var ytdSpend=ytdOrders.reduce(function(s,o){return s+o.total},0);
+  var catSpend={};
+  orders.forEach(function(o){o.items.forEach(function(i){
+    var p=state.products.find(function(p){return p.id===i.id});
+    var cat=p?p.category:"Other";
+    catSpend[cat]=(catSpend[cat]||0)+i.subtotal;
+  })});
+  var catEntries=Object.entries(catSpend).sort(function(a,b){return b[1]-a[1]});
+  var maxCat=catEntries.length?catEntries[0][1]:1;
+  var skuQty={};
+  orders.forEach(function(o){o.items.forEach(function(i){skuQty[i.name]=(skuQty[i.name]||0)+i.qty})});
+  var skuEntries=Object.entries(skuQty).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
+  var monthSpend={};
+  orders.forEach(function(o){var mk=monthKey(o.date);monthSpend[mk]=(monthSpend[mk]||0)+o.total});
+  var monthEntries=Object.entries(monthSpend).sort(function(a,b){return a[0]>b[0]?1:-1}).slice(-6);
+  var maxMonth=monthEntries.length?Math.max.apply(null,monthEntries.map(function(e){return e[1]})):1;
 
-  var html='<div class="wrap-md"><div class="pre">'+state.unit+'</div><div class="h1">Dashboard</div>'+
+  var html='<div class="wrap-md"><div class="pre">'+(state.accountName||state.unit)+'</div><div class="h1">Dashboard</div>'+
     '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:40px">'+
     '<div class="stat-card"><div class="stat-label">Lifetime</div><div class="stat-value">'+fmt(lifetime)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">YTD Spend</div><div class="stat-value">'+fmt(ytdSpend)+'</div><div class="stat-sub">'+ytdOrders.length+' orders</div></div>'+
     '<div class="stat-card"><div class="stat-label">Total Orders</div><div class="stat-value">'+orders.length+'</div></div>'+
     '</div>'+
-
-    // Spend by category
-    '<div style="margin-bottom:48px">'+
-    '<div class="pre">Spend by Category</div>'+
+    '<div style="margin-bottom:48px"><div class="pre">Spend by Category</div>'+
     '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
     catEntries.map(function(e){
       var pct=Math.round((e[1]/maxCat)*100);
-      return '<div>'+
-        '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
-        '<span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
-        '<div style="background:var(--border);height:6px;border-radius:3px">'+
-        '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
+      return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
+        '<div style="background:var(--border);height:6px;border-radius:3px"><div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
     }).join("")+"</div></div>"+
-
-    // Top SKUs
-    '<div style="margin-bottom:48px">'+
-    '<div class="pre">Top Items by Quantity</div>'+
-    '<div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">'+
+    '<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity</div>'+
+    '<div style="display:flex;flex-direction:column;gap:6px;margin-top:16px">'+
     skuEntries.map(function(e){
       var p=state.products.find(function(p){return p.name===e[0]});
-      var unit=p?p.unit:"";
       return '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--card);border:1px solid var(--border);font-size:13px">'+
-        '<span>'+e[0]+'</span>'+
-        '<span style="color:var(--accent);font-family:Georgia,serif">'+e[1]+' '+unit+'</span></div>';
+        '<span>'+e[0]+'</span><span style="color:var(--accent);font-family:Georgia,serif">'+e[1]+' '+(p?p.unit:"")+'</span></div>';
     }).join("")+"</div></div>"+
-
-    // Monthly trend
     (monthEntries.length>1?
-    '<div style="margin-bottom:48px">'+
-    '<div class="pre">Monthly Spend</div>'+
+    '<div style="margin-bottom:48px"><div class="pre">Monthly Spend</div>'+
     '<div style="display:flex;align-items:flex-end;gap:8px;margin-top:16px;height:120px">'+
     monthEntries.map(function(e){
       var pct=Math.round((e[1]/maxMonth)*100);
-      var label=e[0].split("-");
-      var mon=new Date(parseInt(label[0]),parseInt(label[1])-1,1).toLocaleDateString("en-CA",{month:"short"});
+      var parts=e[0].split("-");
+      var label=new Date(parseInt(parts[0]),parseInt(parts[1])-1,1).toLocaleDateString("en-CA",{month:"short"});
       return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
         '<div style="font-size:10px;color:var(--accent)">'+fmt(e[1])+'</div>'+
         '<div style="flex:1;width:100%;display:flex;align-items:flex-end">'+
         '<div style="background:var(--accent);width:100%;height:'+pct+'%;min-height:4px;border-radius:2px 2px 0 0"></div></div>'+
-        '<div style="font-size:10px;color:var(--muted)">'+mon+'</div></div>';
-    }).join("")+
-    '</div></div>':"")+"</div>";
-
+        '<div style="font-size:10px;color:var(--muted)">'+label+'</div></div>';
+    }).join("")+'</div></div>':"")+"</div>";
   return html;
 }
 
@@ -502,20 +499,34 @@ function orderCardHTML(o,screen){
   return '<div class="order-card">'+
     '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];go(\''+screen+'\')">'+
     '<div><div style="font-size:13px">'+ds+'</div>'+
-    '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+" items</div></div>"+
-    '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+"</div>"+
-    '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+"</div></div>"+
+    '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+' items</div></div>'+
+    '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+'</div>'+
+    '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+'</div></div>'+
     (open?'<div class="order-detail">'+
     o.items.map(function(i){return'<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>'}).join("")+
-    (o.note?'<div class="order-note">'+o.note+"</div>":"")+
-    "</div>":"")+
-    "</div>";
+    (o.note?'<div class="order-note">'+o.note+'</div>':'')+
+    '</div>':'')+
+    '</div>';
 }
 
-// Init — restore unit from localStorage
-var savedUnit=null;
-try{savedUnit=localStorage.getItem(UNIT_KEY)}catch(e){}
-if(savedUnit){
+// Init
+var savedUnit=null,savedAcct=null;
+try{savedUnit=localStorage.getItem(UNIT_KEY);savedAcct=localStorage.getItem(ACCT_KEY)}catch(e){}
+if(savedUnit==="wholesale"&&savedAcct){
+  showLoading("Loading...");
+  api("action=getAccounts").then(function(data){
+    if(data.accounts) state.accounts=data.accounts;
+    var match=state.accounts.find(function(a){return a.name===savedAcct});
+    if(match){
+      state.accountName=match.name;
+      state.unit=match.name;
+      loadCart();
+      Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
+    } else {
+      render();
+    }
+  });
+} else if(savedUnit&&savedUnit!=="wholesale"){
   state.unit=savedUnit;
   loadCart();
   showLoading("Loading...");
