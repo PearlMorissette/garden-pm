@@ -18,6 +18,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .nav-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pill{background:transparent;color:var(--muted);border:1px solid var(--border);padding:6px 16px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s}
 .pill.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.pill:disabled{opacity:0.5;cursor:not-allowed}
 .wrap{max-width:900px;margin:0 auto;padding:40px 24px}
 .wrap-md{max-width:800px;margin:0 auto;padding:40px 24px}
 .pre{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
@@ -38,10 +39,10 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .stat-grid{display:grid;gap:1px;margin-bottom:40px}
 .stat-card{background:var(--card);border:1px solid var(--border);padding:24px}
 .stat-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-.stat-value{font-family:Georgia,serif;font-size:32px;font-weight:300}
+.stat-value{font-family:Georgia,serif;font-size:28px;font-weight:300}
 .stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
 .order-card{background:var(--card);border:1px solid var(--border);margin-bottom:2px}
-.order-head{display:grid;grid-template-columns:1fr 100px 100px 80px;gap:12px;padding:14px 16px;align-items:center;cursor:pointer}
+.order-head{display:grid;grid-template-columns:1fr 140px 100px 80px;gap:12px;padding:14px 16px;align-items:center;cursor:pointer}
 .order-detail{border-top:1px solid var(--border);padding:12px 16px}
 .order-detail-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid #1e1d1b}
 .order-note{margin-top:10px;font-size:12px;color:var(--accent);font-style:italic}
@@ -54,7 +55,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .auth-error{color:#c44;font-size:12px;margin-bottom:12px;display:none}
 @media(max-width:600px){
   .admin-row{grid-template-columns:16px 1fr 70px 48px;gap:6px;padding:8px}
-  .order-head{grid-template-columns:1fr 80px 80px 60px}
+  .order-head{grid-template-columns:1fr 100px 80px 60px}
   nav{padding:12px 16px}
   .wrap,.wrap-md{padding:28px 16px}
 }
@@ -113,8 +114,7 @@ function yearKey(d){return ""+new Date(d).getFullYear()}
 
 function showToast(msg){
   var t=document.getElementById("toast");
-  t.textContent=msg;
-  t.classList.add("show");
+  t.textContent=msg;t.classList.add("show");
   setTimeout(function(){t.classList.remove("show")},2500);
 }
 
@@ -136,9 +136,7 @@ function showAdmin(){
   document.getElementById("auth-screen").style.display="none";
   document.getElementById("main-app").style.display="block";
   showLoading();
-  Promise.all([loadProducts(),loadAvailability(),loadOrders()]).then(function(){
-    renderTab();
-  });
+  Promise.all([loadProducts(),loadAvailability(),loadOrders()]).then(function(){renderTab()});
 }
 
 function logout(){
@@ -154,38 +152,36 @@ function showLoading(){
 }
 
 function loadProducts(){
-  return api("action=getProducts").then(function(data){
-    if(data.products) state.products=data.products;
-  });
+  return api("action=getProducts").then(function(data){if(data.products)state.products=data.products});
 }
-
 function loadAvailability(){
-  return api("action=getAvailability").then(function(data){
-    if(data.availability) state.availability=data.availability;
-  });
+  return api("action=getAvailability").then(function(data){if(data.availability)state.availability=data.availability});
 }
-
 function loadOrders(){
-  return api("action=getOrders&unit=All").then(function(data){
-    if(data.orders) state.orders=data.orders;
-  });
+  return api("action=getOrders&unit=All").then(function(data){if(data.orders)state.orders=data.orders});
 }
 
 function switchTab(tab){
+  var btn=document.getElementById("tab-"+(tab==="availability"?"avail":tab==="orders"?"orders":"dash"));
+  if(btn){btn.disabled=true;btn.textContent="Loading...";}
   state.tab=tab;
   if(tab==="orders"||tab==="dashboard"){
-    showLoading();
     loadOrders().then(function(){renderTab()});
   } else {
-    showLoading();
     loadAvailability().then(function(){renderTab()});
   }
 }
 
 function renderTab(){
   document.getElementById("tab-avail").classList.toggle("active",state.tab==="availability");
+  document.getElementById("tab-avail").disabled=false;
+  document.getElementById("tab-avail").textContent="Availability";
   document.getElementById("tab-orders").classList.toggle("active",state.tab==="orders");
+  document.getElementById("tab-orders").disabled=false;
+  document.getElementById("tab-orders").textContent="Orders";
   document.getElementById("tab-dash").classList.toggle("active",state.tab==="dashboard");
+  document.getElementById("tab-dash").disabled=false;
+  document.getElementById("tab-dash").textContent="Dashboard";
   if(state.tab==="availability") renderAvailability();
   else if(state.tab==="orders") renderOrders();
   else renderDashboard();
@@ -195,35 +191,26 @@ function renderAvailability(){
   var cats=["All"].concat(Array.from(new Set(state.products.map(function(p){return p.category}))));
   var filtered=state.products.filter(function(p){return state.adminCat==="All"||p.category===state.adminCat});
   var onCount=Object.values(state.availability).filter(function(v){return v.on}).length;
-
   var html='<div class="wrap">'+
     '<div class="pre">This Week</div>'+
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px">'+
     '<div class="h1" style="margin-bottom:0">Availability</div>'+
-    '<div style="font-size:12px;color:var(--muted)">'+onCount+" of "+state.products.length+" active</div>"+
-    '</div>'+
-    '<div class="filter-bar">'+
-    cats.map(function(c){
+    '<div style="font-size:12px;color:var(--muted)">'+onCount+" of "+state.products.length+" active</div></div>"+
+    '<div class="filter-bar">'+cats.map(function(c){
       return '<button class="pill'+(state.adminCat===c?" active":"")+'" onclick="state.adminCat=\''+c+'\';renderAvailability()">'+c+"</button>";
     }).join("")+"</div>"+
     '<div style="display:grid;grid-template-columns:24px 1fr 90px 56px;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">'+
     '<div></div><div>Product</div><div style="text-align:center">Avail. QTY</div><div></div></div>';
-
   filtered.forEach(function(p){
     var av=state.availability[String(p.id)]||{on:false,remaining:null};
     var qty=av.remaining!==null?av.remaining:0;
-
     html+='<div class="admin-row">'+
       '<div class="dot" style="background:'+(av.on?"var(--accent)":"var(--border)")+'"></div>'+
-      '<div>'+
-      '<div style="font-size:13px">'+p.name+'</div>'+
-      '<div style="font-size:11px;color:var(--muted)">'+p.category+" · "+fmt(p.price)+"/"+p.unit+'</div>'+
-      '</div>'+
+      '<div><div style="font-size:13px">'+p.name+'</div>'+
+      '<div style="font-size:11px;color:var(--muted)">'+p.category+" · "+fmt(p.price)+"/"+p.unit+'</div></div>'+
       '<input class="max-input" type="number" min="0" placeholder="—" value="'+(qty||"")+'" onchange="setMax('+p.id+',this.value)">'+
-      '<button class="tog '+(av.on?"tog-on":"tog-off")+'" onclick="toggleAvail('+p.id+')">'+(av.on?"ON":"OFF")+"</button>"+
-      "</div>";
+      '<button class="tog '+(av.on?"tog-on":"tog-off")+'" onclick="toggleAvail('+p.id+')">'+(av.on?"ON":"OFF")+"</button></div>";
   });
-
   document.getElementById("app-content").innerHTML=html+"</div>";
 }
 
@@ -247,13 +234,21 @@ function setMax(id,val){
   });
 }
 
+function isWholesale(unit){
+  return unit!=="Restaurant"&&unit!=="Bakery";
+}
+
 function renderOrders(){
   var rpmLife=state.orders.filter(function(o){return o.unit==="Restaurant"}).reduce(function(s,o){return s+o.total},0);
   var bakLife=state.orders.filter(function(o){return o.unit==="Bakery"}).reduce(function(s,o){return s+o.total},0);
+  var wsLife=state.orders.filter(function(o){return isWholesale(o.unit)}).reduce(function(s,o){return s+o.total},0);
   var lifetime=state.orders.reduce(function(s,o){return s+o.total},0);
+
+  // Filter options: All, Restaurant, Bakery, Wholesale (all wholesale accounts)
   var filtered=state.orders.filter(function(o){
     var now=new Date();
-    if(state.historyUnit!=="All"&&o.unit!==state.historyUnit) return false;
+    if(state.historyUnit==="Wholesale"&&!isWholesale(o.unit)) return false;
+    if(state.historyUnit!=="All"&&state.historyUnit!=="Wholesale"&&o.unit!==state.historyUnit) return false;
     if(state.historyFilter==="week") return weekKey(o.date)===weekKey(now);
     if(state.historyFilter==="month") return monthKey(o.date)===monthKey(now);
     if(state.historyFilter==="year") return yearKey(o.date)===yearKey(now);
@@ -262,39 +257,41 @@ function renderOrders(){
   var periodSpend=filtered.reduce(function(s,o){return s+o.total},0);
 
   var html='<div class="wrap-md"><div class="pre">Garden Admin</div><div class="h1">Order History</div>'+
-    '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">'+
-    '<div class="stat-card"><div class="stat-label">Total Lifetime</div><div class="stat-value">'+fmt(lifetime)+"</div></div>"+
-    '<div class="stat-card"><div class="stat-label">Restaurant</div><div class="stat-value">'+fmt(rpmLife)+"</div></div>"+
-    '<div class="stat-card"><div class="stat-label">Bakery</div><div class="stat-value">'+fmt(bakLife)+"</div></div></div>"+
-    '<div class="filter-bar">'+
-    [["all","All Time"],["week","This Week"],["month","This Month"],["year","This Year"]].map(function(x){
+    '<div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">'+
+    '<div class="stat-card"><div class="stat-label">Total Lifetime</div><div class="stat-value">'+fmt(lifetime)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Restaurant</div><div class="stat-value">'+fmt(rpmLife)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Bakery</div><div class="stat-value">'+fmt(bakLife)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Wholesale</div><div class="stat-value">'+fmt(wsLife)+'</div></div>'+
+    '</div>'+
+    '<div class="filter-bar">'+[["all","All Time"],["week","This Week"],["month","This Month"],["year","This Year"]].map(function(x){
       return '<button class="pill'+(state.historyFilter===x[0]?" active":"")+'" onclick="state.historyFilter=\''+x[0]+'\';renderOrders()">'+x[1]+"</button>";
     }).join("")+"</div>"+
-    '<div class="filter-bar">'+
-    ["All","Restaurant","Bakery"].map(function(u){
+    '<div class="filter-bar">'+["All","Restaurant","Bakery","Wholesale"].map(function(u){
       return '<button class="pill'+(state.historyUnit===u?" active":"")+'" onclick="state.historyUnit=\''+u+'\';renderOrders()">'+u+"</button>";
     }).join("")+"</div>"+
     '<div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:12px;color:var(--muted)">'+
     '<span>'+filtered.length+' orders</span>'+
-    '<span style="font-family:Georgia,serif;font-size:16px;color:var(--cream)">'+fmt(periodSpend)+"</span></div>";
+    '<span style="font-family:Georgia,serif;font-size:16px;color:var(--cream)">'+fmt(periodSpend)+'</span></div>';
 
   if(!filtered.length) html+='<div class="empty">No orders in this period.</div>';
   else {
     filtered.forEach(function(o){
       var ds=new Date(o.date).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric",year:"numeric"});
       var open=state.openOrders[o.id];
+      var unitLabel=o.unit;
+      var unitColor=o.unit==="Restaurant"?"var(--accent)":o.unit==="Bakery"?"#8a7a5a":"#7a8a6a";
       html+='<div class="order-card">'+
         '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];renderOrders()">'+
         '<div><div style="font-size:13px">'+ds+'</div>'+
-        '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+" items</div></div>"+
-        '<div style="font-size:11px;color:var(--accent);letter-spacing:1px">'+o.unit+'</div>'+
-        '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+"</div>"+
-        '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+"</div></div>"+
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+' items</div></div>'+
+        '<div style="font-size:11px;letter-spacing:0.5px;color:'+unitColor+'">'+unitLabel+'</div>'+
+        '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+'</div>'+
+        '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+'</div></div>'+
         (open?'<div class="order-detail">'+
         o.items.map(function(i){return'<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>'}).join("")+
-        (o.note?'<div class="order-note">'+o.note+"</div>":"")+
-        "</div>":"")+
-        "</div>";
+        (o.note?'<div class="order-note">'+o.note+'</div>':'')+
+        '</div>':'')+
+        '</div>';
     });
   }
   document.getElementById("app-content").innerHTML=html+"</div>";
@@ -306,50 +303,47 @@ function renderDashboard(){
     document.getElementById("app-content").innerHTML='<div class="wrap"><div class="pre">Garden Admin</div><div class="h1">Dashboard</div><div class="empty">No orders yet.</div></div>';
     return;
   }
-
   var lifetime=orders.reduce(function(s,o){return s+o.total},0);
   var rpmLife=orders.filter(function(o){return o.unit==="Restaurant"}).reduce(function(s,o){return s+o.total},0);
   var bakLife=orders.filter(function(o){return o.unit==="Bakery"}).reduce(function(s,o){return s+o.total},0);
+  var wsLife=orders.filter(function(o){return isWholesale(o.unit)}).reduce(function(s,o){return s+o.total},0);
   var ytdOrders=orders.filter(function(o){return yearKey(o.date)===yearKey(new Date())});
   var ytdSpend=ytdOrders.reduce(function(s,o){return s+o.total},0);
 
   var catSpend={};
-  orders.forEach(function(o){
-    o.items.forEach(function(i){
-      var p=state.products.find(function(p){return p.id===i.id});
-      var cat=p?p.category:"Other";
-      catSpend[cat]=(catSpend[cat]||0)+i.subtotal;
-    });
-  });
+  orders.forEach(function(o){o.items.forEach(function(i){
+    var p=state.products.find(function(p){return p.id===i.id});
+    var cat=p?p.category:"Other";
+    catSpend[cat]=(catSpend[cat]||0)+i.subtotal;
+  })});
   var catEntries=Object.entries(catSpend).sort(function(a,b){return b[1]-a[1]});
   var maxCat=catEntries.length?catEntries[0][1]:1;
 
   var skuQty={};
-  orders.forEach(function(o){
-    o.items.forEach(function(i){
-      skuQty[i.name]=(skuQty[i.name]||0)+i.qty;
-    });
-  });
+  orders.forEach(function(o){o.items.forEach(function(i){skuQty[i.name]=(skuQty[i.name]||0)+i.qty})});
   var skuEntries=Object.entries(skuQty).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
 
-  var monthRpm={};var monthBak={};
+  // Monthly by unit type
+  var monthRpm={},monthBak={},monthWs={};
   orders.forEach(function(o){
     var mk=monthKey(o.date);
     if(o.unit==="Restaurant") monthRpm[mk]=(monthRpm[mk]||0)+o.total;
-    else monthBak[mk]=(monthBak[mk]||0)+o.total;
+    else if(o.unit==="Bakery") monthBak[mk]=(monthBak[mk]||0)+o.total;
+    else monthWs[mk]=(monthWs[mk]||0)+o.total;
   });
-  var allMonths=Array.from(new Set(Object.keys(monthRpm).concat(Object.keys(monthBak)))).sort().slice(-6);
-  var maxMonth=Math.max.apply(null,allMonths.map(function(m){return(monthRpm[m]||0)+(monthBak[m]||0)})||[1]);
+  var allMonths=Array.from(new Set(Object.keys(monthRpm).concat(Object.keys(monthBak)).concat(Object.keys(monthWs)))).sort().slice(-6);
+  var maxMonth=allMonths.length?Math.max.apply(null,allMonths.map(function(m){return(monthRpm[m]||0)+(monthBak[m]||0)+(monthWs[m]||0)})):1;
 
   var html='<div class="wrap-md"><div class="pre">Garden Admin</div><div class="h1">Dashboard</div>'+
-    '<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:40px">'+
+    '<div class="stat-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:40px">'+
     '<div class="stat-card"><div class="stat-label">Total Lifetime</div><div class="stat-value">'+fmt(lifetime)+'</div></div>'+
-    '<div class="stat-card"><div class="stat-label">YTD Spend</div><div class="stat-value">'+fmt(ytdSpend)+'</div><div class="stat-sub">'+ytdOrders.length+' orders</div></div>'+
+    '<div class="stat-card"><div class="stat-label">YTD</div><div class="stat-value">'+fmt(ytdSpend)+'</div><div class="stat-sub">'+ytdOrders.length+' orders</div></div>'+
     '<div class="stat-card"><div class="stat-label">Restaurant</div><div class="stat-value">'+fmt(rpmLife)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Bakery</div><div class="stat-value">'+fmt(bakLife)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Wholesale</div><div class="stat-value">'+fmt(wsLife)+'</div></div>'+
     '</div>'+
-    '<div style="margin-bottom:48px">'+
-    '<div class="pre">Spend by Category</div>'+
+
+    '<div style="margin-bottom:48px"><div class="pre">Spend by Category</div>'+
     '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
     catEntries.map(function(e){
       var pct=Math.round((e[1]/maxCat)*100);
@@ -358,35 +352,38 @@ function renderDashboard(){
         '<div style="background:var(--border);height:6px;border-radius:3px">'+
         '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
     }).join("")+"</div></div>"+
-    '<div style="margin-bottom:48px">'+
-    '<div class="pre">Top Items by Quantity Ordered</div>'+
+
+    '<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity Ordered</div>'+
     '<div style="display:flex;flex-direction:column;gap:6px;margin-top:16px">'+
     skuEntries.map(function(e){
       var p=state.products.find(function(p){return p.name===e[0]});
-      var unit=p?p.unit:"";
       return '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--card);border:1px solid var(--border);font-size:13px">'+
-        '<span>'+e[0]+'</span><span style="color:var(--accent);font-family:Georgia,serif">'+e[1]+' '+unit+'</span></div>';
+        '<span>'+e[0]+'</span><span style="color:var(--accent);font-family:Georgia,serif">'+e[1]+' '+(p?p.unit:"")+'</span></div>';
     }).join("")+"</div></div>"+
+
     (allMonths.length>1?
-    '<div style="margin-bottom:48px">'+
-    '<div class="pre">Monthly Spend — Restaurant vs Bakery</div>'+
+    '<div style="margin-bottom:48px"><div class="pre">Monthly Spend by Unit</div>'+
     '<div style="display:flex;align-items:flex-end;gap:8px;margin-top:16px;height:140px">'+
     allMonths.map(function(m){
-      var rpm=monthRpm[m]||0;var bak=monthBak[m]||0;var total=rpm+bak;
+      var rpm=monthRpm[m]||0,bak=monthBak[m]||0,ws=monthWs[m]||0,total=rpm+bak+ws;
       var pct=Math.round((total/maxMonth)*100);
       var rpmPct=total>0?Math.round((rpm/total)*100):0;
+      var bakPct=total>0?Math.round((bak/total)*100):0;
+      var wsPct=100-rpmPct-bakPct;
       var label=new Date(m.split("-")[0],parseInt(m.split("-")[1])-1,1).toLocaleDateString("en-CA",{month:"short"});
       return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
         '<div style="font-size:10px;color:var(--muted)">'+fmt(total)+'</div>'+
         '<div style="flex:1;width:100%;display:flex;align-items:flex-end">'+
         '<div style="width:100%;height:'+pct+'%;min-height:4px;border-radius:2px 2px 0 0;overflow:hidden;display:flex;flex-direction:column">'+
         '<div style="background:var(--accent);flex:'+rpmPct+'"></div>'+
-        '<div style="background:#5a4a2a;flex:'+(100-rpmPct)+'"></div>'+
+        '<div style="background:#5a4a2a;flex:'+bakPct+'"></div>'+
+        '<div style="background:#3a5a3a;flex:'+wsPct+'"></div>'+
         '</div></div><div style="font-size:10px;color:var(--muted)">'+label+'</div></div>';
     }).join("")+
     '</div><div style="display:flex;gap:16px;margin-top:12px;font-size:11px;color:var(--muted)">'+
     '<span><span style="display:inline-block;width:10px;height:10px;background:var(--accent);border-radius:2px;margin-right:4px"></span>Restaurant</span>'+
     '<span><span style="display:inline-block;width:10px;height:10px;background:#5a4a2a;border-radius:2px;margin-right:4px"></span>Bakery</span>'+
+    '<span><span style="display:inline-block;width:10px;height:10px;background:#3a5a3a;border-radius:2px;margin-right:4px"></span>Wholesale</span>'+
     '</div></div>':"")+"</div>";
 
   document.getElementById("app-content").innerHTML=html;
