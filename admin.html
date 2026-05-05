@@ -49,6 +49,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .empty{text-align:center;padding:60px 24px;color:var(--muted)}
 .loading{text-align:center;padding:80px 24px;color:var(--muted);font-size:13px;letter-spacing:1px}
 .spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+.stale-bar{background:#1a1a16;border-bottom:1px solid var(--border);padding:5px 28px;font-size:11px;color:var(--muted);text-align:right;letter-spacing:1px}
 @keyframes spin{to{transform:rotate(360deg)}}
 #auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh}
 .auth-card{background:var(--card);border:1px solid var(--border);padding:40px 36px;width:100%;max-width:320px}
@@ -88,6 +89,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
       <button class="pill" onclick="logout()" style="color:var(--muted)">Sign Out</button>
     </div>
   </nav>
+  <div id="stale-bar" class="stale-bar" style="display:none">Refreshing...</div>
   <div id="app-content"></div>
 </div>
 
@@ -95,6 +97,12 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 var API = "https://garden-pm-proxy-0a2d338d45e9.herokuapp.com";
 var ADMIN_CODE = "garden2024";
 var AUTH_KEY = "gpm_admin_auth";
+var ADMIN_PROD_KEY = "gpm_adm_products";
+var ADMIN_AVAIL_KEY = "gpm_adm_availability";
+var ADMIN_ORDERS_KEY = "gpm_adm_orders";
+var AVAIL_TTL = 60 * 1000;      // 1 min — admin sees fresher availability
+var ORDERS_TTL = 2 * 60 * 1000; // 2 min
+var PROD_TTL = 10 * 60 * 1000;  // 10 min — products rarely change
 
 var state = {
   tab: "availability",
@@ -106,6 +114,8 @@ var state = {
   historyUnit: "All",
   openOrders: {}
 };
+
+// ── UTILS ──────────────────────────────────────────────────
 
 function fmt(n){return "$"+Number(n).toFixed(2)}
 function weekKey(d){var dt=new Date(d),j=new Date(dt.getFullYear(),0,1),w=Math.ceil(((dt-j)/86400000+j.getDay()+1)/7);return dt.getFullYear()+"-W"+String(w).padStart(2,"0")}
@@ -122,6 +132,38 @@ function api(params){
   return fetch(API+"?"+params).then(function(r){return r.json()});
 }
 
+// ── CACHE ──────────────────────────────────────────────────
+
+function cacheSet(key,data){
+  try{localStorage.setItem(key,JSON.stringify({ts:Date.now(),data:data}))}catch(e){}
+}
+
+function cacheGet(key,maxAge){
+  try{
+    var raw=localStorage.getItem(key);
+    if(!raw) return null;
+    var obj=JSON.parse(raw);
+    if(maxAge && Date.now()-obj.ts > maxAge) return null;
+    return obj.data;
+  }catch(e){return null}
+}
+
+function cacheGetStale(key){
+  // Returns data regardless of age — used for instant render before refresh
+  try{
+    var raw=localStorage.getItem(key);
+    if(!raw) return null;
+    return JSON.parse(raw).data;
+  }catch(e){return null}
+}
+
+function showStaleBar(show){
+  var bar=document.getElementById("stale-bar");
+  if(bar) bar.style.display=show?"block":"none";
+}
+
+// ── AUTH ───────────────────────────────────────────────────
+
 function tryAdmin(){
   var code=document.getElementById("admin-code").value;
   if(code===ADMIN_CODE){
@@ -135,8 +177,34 @@ function tryAdmin(){
 function showAdmin(){
   document.getElementById("auth-screen").style.display="none";
   document.getElementById("main-app").style.display="block";
-  showLoading();
-  Promise.all([loadProducts(),loadAvailability(),loadOrders()]).then(function(){renderTab()});
+
+  // Load from cache immediately — show UI without waiting
+  var cachedProducts = cacheGetStale(ADMIN_PROD_KEY);
+  var cachedAvail = cacheGetStale(ADMIN_AVAIL_KEY);
+  var cachedOrders = cacheGetStale(ADMIN_ORDERS_KEY);
+
+  var hasCached = cachedProducts && cachedAvail && cachedOrders;
+
+  if(cachedProducts) state.products = cachedProducts;
+  if(cachedAvail) state.availability = cachedAvail;
+  if(cachedOrders) state.orders = cachedOrders;
+
+  if(hasCached){
+    // Render instantly from cache, then refresh in background
+    renderTab();
+    showStaleBar(true);
+    refreshAll().then(function(){
+      showStaleBar(false);
+      renderTab();
+    });
+  } else {
+    // First visit — must fetch
+    showLoading();
+    refreshAll().then(function(){
+      showStaleBar(false);
+      renderTab();
+    });
+  }
 }
 
 function logout(){
@@ -151,41 +219,73 @@ function showLoading(){
     '<div class="loading"><div class="spinner"></div>Loading...</div>';
 }
 
-function loadProducts(){
-  return api("action=getProducts").then(function(data){if(data.products)state.products=data.products});
-}
-function loadAvailability(){
-  return api("action=getAvailability").then(function(data){if(data.availability)state.availability=data.availability});
-}
-function loadOrders(){
-  return api("action=getOrders&unit=All").then(function(data){if(data.orders)state.orders=data.orders});
+// ── DATA FETCHERS ──────────────────────────────────────────
+
+function fetchProducts(){
+  return api("action=getProducts").then(function(data){
+    if(data.products){state.products=data.products;cacheSet(ADMIN_PROD_KEY,data.products)}
+  }).catch(function(e){console.error("fetchProducts",e)});
 }
 
+function fetchAvailability(){
+  return api("action=getAvailability").then(function(data){
+    if(data.availability){state.availability=data.availability;cacheSet(ADMIN_AVAIL_KEY,data.availability)}
+  }).catch(function(e){console.error("fetchAvailability",e)});
+}
+
+function fetchOrders(){
+  return api("action=getOrders&unit=All").then(function(data){
+    if(data.orders){state.orders=data.orders;cacheSet(ADMIN_ORDERS_KEY,data.orders)}
+  }).catch(function(e){console.error("fetchOrders",e)});
+}
+
+function refreshAll(){
+  // Always fetch all three in parallel — admin needs fresh data
+  return Promise.all([fetchProducts(), fetchAvailability(), fetchOrders()]);
+}
+
+// ── TAB SWITCHING ──────────────────────────────────────────
+
 function switchTab(tab){
-  var btn=document.getElementById("tab-"+(tab==="availability"?"avail":tab==="orders"?"orders":"dash"));
-  if(btn){btn.disabled=true;btn.textContent="Loading...";}
   state.tab=tab;
-  if(tab==="orders"||tab==="dashboard"){
-    loadOrders().then(function(){renderTab()});
+
+  // Render immediately from whatever is in state (already cache-loaded)
+  renderTab();
+
+  // Background refresh — only fetch what this tab needs
+  showStaleBar(true);
+  var refreshPromise;
+  if(tab==="availability"){
+    refreshPromise=Promise.all([fetchProducts(),fetchAvailability()]);
+  } else if(tab==="orders"){
+    refreshPromise=fetchOrders();
   } else {
-    loadAvailability().then(function(){renderTab()});
+    refreshPromise=refreshAll();
   }
+  refreshPromise.then(function(){
+    showStaleBar(false);
+    renderTab();
+  });
 }
 
 function renderTab(){
+  // Update nav active states
   document.getElementById("tab-avail").classList.toggle("active",state.tab==="availability");
-  document.getElementById("tab-avail").disabled=false;
   document.getElementById("tab-avail").textContent="Availability";
+  document.getElementById("tab-avail").disabled=false;
   document.getElementById("tab-orders").classList.toggle("active",state.tab==="orders");
-  document.getElementById("tab-orders").disabled=false;
   document.getElementById("tab-orders").textContent="Orders";
+  document.getElementById("tab-orders").disabled=false;
   document.getElementById("tab-dash").classList.toggle("active",state.tab==="dashboard");
-  document.getElementById("tab-dash").disabled=false;
   document.getElementById("tab-dash").textContent="Dashboard";
+  document.getElementById("tab-dash").disabled=false;
+
   if(state.tab==="availability") renderAvailability();
   else if(state.tab==="orders") renderOrders();
   else renderDashboard();
 }
+
+// ── AVAILABILITY ───────────────────────────────────────────
 
 function renderAvailability(){
   var cats=["All"].concat(Array.from(new Set(state.products.map(function(p){return p.category}))));
@@ -218,10 +318,11 @@ function toggleAvail(id){
   var cur=state.availability[String(id)]||{on:false,remaining:null};
   var newOn=!cur.on;
   state.availability[String(id)]=Object.assign({},cur,{on:newOn});
+  cacheSet(ADMIN_AVAIL_KEY,state.availability);
   renderAvailability();
   api("action=setOne&id="+id+"&on="+newOn).then(function(r){
     if(r.success) showToast(newOn?"On":"Off");
-    else showToast("Error saving");
+    else{showToast("Error saving");state.availability[String(id)]=cur;renderAvailability();}
   });
 }
 
@@ -229,14 +330,15 @@ function setMax(id,val){
   var qty=parseFloat(val)||0;
   var cur=state.availability[String(id)]||{on:false,remaining:null};
   state.availability[String(id)]=Object.assign({},cur,{remaining:qty||null});
+  cacheSet(ADMIN_AVAIL_KEY,state.availability);
   api("action=setMax&id="+id+"&max="+qty).then(function(r){
     if(r.success) showToast("QTY saved");
   });
 }
 
-function isWholesale(unit){
-  return unit!=="Restaurant"&&unit!=="Bakery";
-}
+// ── ORDERS ─────────────────────────────────────────────────
+
+function isWholesale(unit){return unit!=="Restaurant"&&unit!=="Bakery"}
 
 function renderOrders(){
   var rpmLife=state.orders.filter(function(o){return o.unit==="Restaurant"}).reduce(function(s,o){return s+o.total},0);
@@ -244,7 +346,6 @@ function renderOrders(){
   var wsLife=state.orders.filter(function(o){return isWholesale(o.unit)}).reduce(function(s,o){return s+o.total},0);
   var lifetime=state.orders.reduce(function(s,o){return s+o.total},0);
 
-  // Filter options: All, Restaurant, Bakery, Wholesale (all wholesale accounts)
   var filtered=state.orders.filter(function(o){
     var now=new Date();
     if(state.historyUnit==="Wholesale"&&!isWholesale(o.unit)) return false;
@@ -274,28 +375,27 @@ function renderOrders(){
     '<span style="font-family:Georgia,serif;font-size:16px;color:var(--cream)">'+fmt(periodSpend)+'</span></div>';
 
   if(!filtered.length) html+='<div class="empty">No orders in this period.</div>';
-  else {
-    filtered.forEach(function(o){
-      var ds=new Date(o.date).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric",year:"numeric"});
-      var open=state.openOrders[o.id];
-      var unitLabel=o.unit;
-      var unitColor=o.unit==="Restaurant"?"var(--accent)":o.unit==="Bakery"?"#8a7a5a":"#7a8a6a";
-      html+='<div class="order-card">'+
-        '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];renderOrders()">'+
-        '<div><div style="font-size:13px">'+ds+'</div>'+
-        '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+' items</div></div>'+
-        '<div style="font-size:11px;letter-spacing:0.5px;color:'+unitColor+'">'+unitLabel+'</div>'+
-        '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+'</div>'+
-        '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+'</div></div>'+
-        (open?'<div class="order-detail">'+
-        o.items.map(function(i){return'<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>'}).join("")+
-        (o.note?'<div class="order-note">'+o.note+'</div>':'')+
-        '</div>':'')+
-        '</div>';
-    });
-  }
+  else filtered.forEach(function(o){
+    var ds=new Date(o.date).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric",year:"numeric"});
+    var open=state.openOrders[o.id];
+    var unitColor=o.unit==="Restaurant"?"var(--accent)":o.unit==="Bakery"?"#8a7a5a":"#7a8a6a";
+    html+='<div class="order-card">'+
+      '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];renderOrders()">'+
+      '<div><div style="font-size:13px">'+ds+'</div>'+
+      '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+' items</div></div>'+
+      '<div style="font-size:11px;letter-spacing:0.5px;color:'+unitColor+'">'+o.unit+'</div>'+
+      '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+'</div>'+
+      '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+'</div></div>'+
+      (open?'<div class="order-detail">'+
+      o.items.map(function(i){return'<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>'}).join("")+
+      (o.note?'<div class="order-note">'+o.note+'</div>':'')+
+      '</div>':'')+
+      '</div>';
+  });
   document.getElementById("app-content").innerHTML=html+"</div>";
 }
+
+// ── DASHBOARD ──────────────────────────────────────────────
 
 function renderDashboard(){
   var orders=state.orders;
@@ -323,7 +423,6 @@ function renderDashboard(){
   orders.forEach(function(o){o.items.forEach(function(i){skuQty[i.name]=(skuQty[i.name]||0)+i.qty})});
   var skuEntries=Object.entries(skuQty).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
 
-  // Monthly by unit type
   var monthRpm={},monthBak={},monthWs={};
   orders.forEach(function(o){
     var mk=monthKey(o.date);
@@ -342,7 +441,6 @@ function renderDashboard(){
     '<div class="stat-card"><div class="stat-label">Bakery</div><div class="stat-value">'+fmt(bakLife)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Wholesale</div><div class="stat-value">'+fmt(wsLife)+'</div></div>'+
     '</div>'+
-
     '<div style="margin-bottom:48px"><div class="pre">Spend by Category</div>'+
     '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
     catEntries.map(function(e){
@@ -352,7 +450,6 @@ function renderDashboard(){
         '<div style="background:var(--border);height:6px;border-radius:3px">'+
         '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
     }).join("")+"</div></div>"+
-
     '<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity Ordered</div>'+
     '<div style="display:flex;flex-direction:column;gap:6px;margin-top:16px">'+
     skuEntries.map(function(e){
@@ -360,7 +457,6 @@ function renderDashboard(){
       return '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--card);border:1px solid var(--border);font-size:13px">'+
         '<span>'+e[0]+'</span><span style="color:var(--accent);font-family:Georgia,serif">'+e[1]+' '+(p?p.unit:"")+'</span></div>';
     }).join("")+"</div></div>"+
-
     (allMonths.length>1?
     '<div style="margin-bottom:48px"><div class="pre">Monthly Spend by Unit</div>'+
     '<div style="display:flex;align-items:flex-end;gap:8px;margin-top:16px;height:140px">'+
@@ -388,6 +484,8 @@ function renderDashboard(){
 
   document.getElementById("app-content").innerHTML=html;
 }
+
+// ── INIT ───────────────────────────────────────────────────
 
 var authed=false;
 try{authed=localStorage.getItem(AUTH_KEY)==="1"}catch(e){}
