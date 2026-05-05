@@ -72,6 +72,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .auth-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh}
 .auth-card{background:var(--card);border:1px solid var(--border);padding:40px 36px;width:100%;max-width:340px}
 .auth-error{color:#c44;font-size:12px;margin-bottom:12px;display:none}
+.stale-bar{background:#1a1a16;border-bottom:1px solid var(--border);padding:6px 28px;font-size:11px;color:var(--muted);text-align:right;letter-spacing:1px}
 @media(max-width:600px){
   .product-grid,.product-row{grid-template-columns:1fr 70px 50px 100px}
   .checkout-row{grid-template-columns:1fr 70px 70px 70px}
@@ -88,7 +89,10 @@ var API = "https://garden-pm-proxy-0a2d338d45e9.herokuapp.com";
 var UNIT_KEY = "gpm_unit";
 var ACCT_KEY = "gpm_account";
 var CART_KEY = "gpm_cart";
-var PROD_CACHE_KEY = "gpm_products_cache";
+var PROD_CACHE_KEY = "gpm_products";
+var AVAIL_CACHE_KEY = "gpm_availability";
+var AVAIL_TTL = 2 * 60 * 1000; // 2 minutes
+var ORDERS_CACHE_KEY = "gpm_orders";
 
 var state = {
   screen: "entry",
@@ -120,6 +124,22 @@ function api(params){
   return fetch(API+"?"+params).then(function(r){return r.json()});
 }
 
+// ── CACHE HELPERS ──────────────────────────────────────────
+
+function cacheSet(key, data){
+  try{localStorage.setItem(key, JSON.stringify({ts:Date.now(),data:data}))}catch(e){}
+}
+
+function cacheGet(key, maxAge){
+  try{
+    var raw=localStorage.getItem(key);
+    if(!raw) return null;
+    var obj=JSON.parse(raw);
+    if(maxAge && Date.now()-obj.ts > maxAge) return null;
+    return obj.data;
+  }catch(e){return null}
+}
+
 function saveCart(){
   var key=CART_KEY+"_"+(state.accountName||state.unit);
   try{localStorage.setItem(key,JSON.stringify(state.cart))}catch(e){}
@@ -129,6 +149,61 @@ function loadCart(){
   var key=CART_KEY+"_"+(state.accountName||state.unit);
   try{var s=localStorage.getItem(key);state.cart=s?JSON.parse(s):{}}catch(e){state.cart={}}
 }
+
+// ── LOADERS ────────────────────────────────────────────────
+
+function loadProducts(background){
+  var cached=cacheGet(PROD_CACHE_KEY);
+  if(cached){
+    state.products=cached;
+    if(!background) return Promise.resolve();
+  }
+  return api("action=getProducts").then(function(data){
+    if(data.products){
+      state.products=data.products;
+      cacheSet(PROD_CACHE_KEY, data.products);
+    }
+  }).catch(function(e){console.error("loadProducts",e)});
+}
+
+function loadAvailability(background){
+  var cached=cacheGet(AVAIL_CACHE_KEY, AVAIL_TTL);
+  if(cached){
+    state.availability=cached;
+    if(!background) return Promise.resolve();
+  }
+  return api("action=getAvailability").then(function(data){
+    if(data.availability){
+      state.availability=data.availability;
+      cacheSet(AVAIL_CACHE_KEY, data.availability);
+    }
+  }).catch(function(e){console.error("loadAvailability",e)});
+}
+
+function loadAvailabilityForce(){
+  return api("action=getAvailability").then(function(data){
+    if(data.availability){
+      state.availability=data.availability;
+      cacheSet(AVAIL_CACHE_KEY, data.availability);
+    }
+  }).catch(function(e){console.error("loadAvailability",e)});
+}
+
+function loadOrders(force){
+  var cached=cacheGet(ORDERS_CACHE_KEY+"_"+(state.accountName||state.unit));
+  if(cached && !force){
+    state.orders=cached;
+    return Promise.resolve();
+  }
+  return api("action=getOrders&unit="+encodeURIComponent(state.unit)).then(function(data){
+    if(data.orders){
+      state.orders=data.orders;
+      cacheSet(ORDERS_CACHE_KEY+"_"+(state.accountName||state.unit), data.orders);
+    }
+  }).catch(function(e){console.error("loadOrders",e)});
+}
+
+// ── RENDER ─────────────────────────────────────────────────
 
 function render(){
   var app=document.getElementById("app");
@@ -147,6 +222,8 @@ function showLoading(msg){
     '<div class="loading"><div class="spinner"></div>'+(msg||"Loading...")+"</div>";
 }
 
+// ── ENTRY ──────────────────────────────────────────────────
+
 function entryHTML(){
   return '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center">'+
     '<div style="margin-bottom:56px">'+
@@ -159,6 +236,40 @@ function entryHTML(){
     '<button style="background:var(--card);border:1px solid var(--border);color:var(--cream);padding:18px 24px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:inherit" onclick="selectUnit(\'Bakery\')">Bakery</button>'+
     '<button style="background:var(--card);border:1px solid var(--border);color:var(--cream);padding:18px 24px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:inherit" onclick="goWholesaleAuth()">Wholesale</button>'+
     '</div></div>';
+}
+
+function selectUnit(unit){
+  state.unit=unit;
+  state.accountName=null;
+  try{localStorage.setItem(UNIT_KEY,unit);localStorage.removeItem(ACCT_KEY)}catch(e){}
+  state.catFilter="All";
+  state.search="";
+  loadCart();
+
+  // Render immediately from cache if available
+  var hasCachedProducts = cacheGet(PROD_CACHE_KEY);
+  var hasCachedAvail = cacheGet(AVAIL_CACHE_KEY, AVAIL_TTL);
+
+  if(hasCachedProducts) state.products = hasCachedProducts;
+  if(hasCachedAvail) state.availability = hasCachedAvail;
+
+  if(hasCachedProducts && hasCachedAvail){
+    // Render immediately, refresh in background
+    go("client");
+    loadProducts(true);
+    loadAvailability(true);
+  } else {
+    showLoading("Loading this week...");
+    Promise.all([loadProducts(), loadAvailability()]).then(function(){go("client")});
+  }
+}
+
+function goWholesaleAuth(){
+  showLoading("Loading...");
+  api("action=getAccounts").then(function(data){
+    if(data.accounts) state.accounts=data.accounts;
+    go("wholesale-auth");
+  });
 }
 
 function wholesaleAuthHTML(){
@@ -177,65 +288,33 @@ function wholesaleAuthHTML(){
     '</div></div></div>';
 }
 
-function goWholesaleAuth(){
-  showLoading("Loading...");
-  api("action=getAccounts").then(function(data){
-    if(data.accounts) state.accounts=data.accounts;
-    go("wholesale-auth");
-  });
-}
-
 function tryWholesale(){
   var name=document.getElementById("ws-name")?document.getElementById("ws-name").value.trim():"";
   var pass=document.getElementById("ws-pass")?document.getElementById("ws-pass").value:"";
-  var match=state.accounts.find(function(a){
-    return a.name.toLowerCase()===name.toLowerCase()&&a.passcode===pass;
-  });
+  var match=state.accounts.find(function(a){return a.name.toLowerCase()===name.toLowerCase()&&a.passcode===pass});
   if(match){
     state.accountName=match.name;
     state.unit=match.name;
     try{localStorage.setItem(UNIT_KEY,"wholesale");localStorage.setItem(ACCT_KEY,match.name)}catch(e){}
     loadCart();
-    showLoading("Loading this week...");
-    Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
+    var hasCachedProducts=cacheGet(PROD_CACHE_KEY);
+    var hasCachedAvail=cacheGet(AVAIL_CACHE_KEY,AVAIL_TTL);
+    if(hasCachedProducts) state.products=hasCachedProducts;
+    if(hasCachedAvail) state.availability=hasCachedAvail;
+    if(hasCachedProducts&&hasCachedAvail){
+      go("client");
+      loadProducts(true);loadAvailability(true);
+    } else {
+      showLoading("Loading this week...");
+      Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
+    }
   } else {
     var err=document.getElementById("ws-err");
     if(err) err.style.display="block";
   }
 }
 
-function selectUnit(unit){
-  state.unit=unit;
-  state.accountName=null;
-  try{localStorage.setItem(UNIT_KEY,unit);localStorage.removeItem(ACCT_KEY)}catch(e){}
-  state.catFilter="All";
-  state.search="";
-  loadCart();
-  showLoading("Loading this week...");
-  try{var c=localStorage.getItem(PROD_CACHE_KEY);if(c)state.products=JSON.parse(c)}catch(e){}
-  Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
-}
-
-function loadProducts(){
-  return api("action=getProducts").then(function(data){
-    if(data.products){
-      state.products=data.products;
-      try{localStorage.setItem(PROD_CACHE_KEY,JSON.stringify(data.products))}catch(e){}
-    }
-  });
-}
-
-function loadAvailability(){
-  return api("action=getAvailability").then(function(data){
-    if(data.availability) state.availability=data.availability;
-  });
-}
-
-function loadOrders(){
-  return api("action=getOrders&unit="+encodeURIComponent(state.unit)).then(function(data){
-    if(data.orders) state.orders=data.orders;
-  });
-}
+// ── NAV ────────────────────────────────────────────────────
 
 function navHTML(){
   var cc=Object.values(state.cart).reduce(function(s,q){return s+q},0);
@@ -255,10 +334,38 @@ function navHTML(){
 }
 
 function navTo(screen){
-  var btn=document.getElementById("nav-"+(screen==="client"?"cat":screen==="history"?"hist":"dash"));
-  if(btn){btn.disabled=true;btn.textContent="Loading...";}
-  loadOrders().then(function(){go(screen)});
+  // Show immediate feedback on button
+  var ids={client:"nav-cat",history:"nav-hist",dashboard:"nav-dash"};
+  var btn=document.getElementById(ids[screen]);
+  if(btn){btn.disabled=true;btn.textContent="...";}
+
+  if(screen==="client"){
+    // Catalogue: render from cache immediately, refresh availability in background
+    var hasCachedAvail=cacheGet(AVAIL_CACHE_KEY,AVAIL_TTL);
+    if(hasCachedAvail) state.availability=hasCachedAvail;
+    go("client");
+    if(!hasCachedAvail) loadAvailability().then(function(){go("client")});
+    else loadAvailability(true); // silent background refresh
+  } else if(screen==="history"||screen==="dashboard"){
+    // Use cached orders, render immediately
+    var cached=cacheGet(ORDERS_CACHE_KEY+"_"+(state.accountName||state.unit));
+    if(cached){
+      state.orders=cached;
+      go(screen);
+      // Refresh in background
+      api("action=getOrders&unit="+encodeURIComponent(state.unit)).then(function(data){
+        if(data.orders){
+          state.orders=data.orders;
+          cacheSet(ORDERS_CACHE_KEY+"_"+(state.accountName||state.unit),data.orders);
+        }
+      });
+    } else {
+      loadOrders(true).then(function(){go(screen)});
+    }
+  }
 }
+
+// ── CATALOGUE ──────────────────────────────────────────────
 
 function getRemaining(p){
   var av=state.availability[String(p.id)];
@@ -268,10 +375,7 @@ function getRemaining(p){
 }
 
 function clientHTML(){
-  var available=state.products.filter(function(p){
-    var av=state.availability[String(p.id)];
-    return av&&av.on;
-  });
+  var available=state.products.filter(function(p){var av=state.availability[String(p.id)];return av&&av.on});
   var cats=["All"].concat(Array.from(new Set(available.map(function(p){return p.category}))));
   if(state.catFilter!=="All"&&cats.indexOf(state.catFilter)<0) state.catFilter="All";
   var filtered=available.filter(function(p){
@@ -338,12 +442,12 @@ function updateCart(id,delta,maxQty){
 
 function setCartQty(id,val,maxQty){
   var n=parseInt(val)||0;n=Math.max(0,n);
-  if(maxQty!==null&&maxQty!==undefined&&n>maxQty){
-    showToast("Only "+maxQty+" available — adjusted");n=maxQty;
-  }
+  if(maxQty!==null&&maxQty!==undefined&&n>maxQty){showToast("Only "+maxQty+" available — adjusted");n=maxQty;}
   if(n===0) delete state.cart[id]; else state.cart[id]=n;
   saveCart();go("client");
 }
+
+// ── CHECKOUT ───────────────────────────────────────────────
 
 function checkoutHTML(){
   var items=Object.entries(state.cart).filter(function(e){return e[1]>0}).map(function(e){
@@ -391,7 +495,7 @@ function submitOrder(){
   if(btn){btn.disabled=true;btn.textContent="Submitting...";}
   var items=Object.entries(state.cart).filter(function(e){return e[1]>0}).map(function(e){
     var p=state.products.find(function(p){return p.id===Number(e[0])});
-    return{id:p.id,name:p.name,qty:e[1],unit:p.unit,price:p.price,subtotal:p.price*e[1]};
+    return{id:p.id,name:p.name,qty:e[1],unit:p.u||p.unit,price:p.price,subtotal:p.price*e[1]};
   });
   var total=items.reduce(function(s,i){return s+i.subtotal},0);
   var note=document.getElementById("order-note")?document.getElementById("order-note").value:"";
@@ -400,6 +504,10 @@ function submitOrder(){
   api("action=submitOrder&data="+encodeURIComponent(JSON.stringify(order))).then(function(r){
     if(r.success){
       state.cart={};saveCart();
+      // Bust availability cache so fresh quantities load
+      try{localStorage.removeItem(AVAIL_CACHE_KEY)}catch(e){}
+      // Bust orders cache so history is fresh
+      try{localStorage.removeItem(ORDERS_CACHE_KEY+"_"+(state.accountName||state.unit))}catch(e){}
       showToast("Order submitted");
       loadAvailability().then(function(){go("client")});
     } else {
@@ -411,6 +519,8 @@ function submitOrder(){
     if(btn){btn.disabled=false;btn.textContent="Submit Order";}
   });
 }
+
+// ── HISTORY ────────────────────────────────────────────────
 
 function historyHTML(){
   var filtered=state.orders.filter(function(o){
@@ -435,6 +545,8 @@ function historyHTML(){
   return html+"</div>";
 }
 
+// ── DASHBOARD ──────────────────────────────────────────────
+
 function dashboardHTML(){
   var orders=state.orders;
   if(!orders.length) return '<div class="wrap"><div class="pre">'+(state.accountName||state.unit)+'</div><div class="h1">Dashboard</div><div class="empty">No orders yet.</div></div>';
@@ -456,7 +568,6 @@ function dashboardHTML(){
   orders.forEach(function(o){var mk=monthKey(o.date);monthSpend[mk]=(monthSpend[mk]||0)+o.total});
   var monthEntries=Object.entries(monthSpend).sort(function(a,b){return a[0]>b[0]?1:-1}).slice(-6);
   var maxMonth=monthEntries.length?Math.max.apply(null,monthEntries.map(function(e){return e[1]})):1;
-
   var html='<div class="wrap-md"><div class="pre">'+(state.accountName||state.unit)+'</div><div class="h1">Dashboard</div>'+
     '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:40px">'+
     '<div class="stat-card"><div class="stat-label">Lifetime</div><div class="stat-value">'+fmt(lifetime)+'</div></div>'+
@@ -509,28 +620,41 @@ function orderCardHTML(o,screen){
     '</div>';
 }
 
-// Init
+// ── INIT ───────────────────────────────────────────────────
+
 var savedUnit=null,savedAcct=null;
 try{savedUnit=localStorage.getItem(UNIT_KEY);savedAcct=localStorage.getItem(ACCT_KEY)}catch(e){}
+
 if(savedUnit==="wholesale"&&savedAcct){
-  showLoading("Loading...");
-  api("action=getAccounts").then(function(data){
-    if(data.accounts) state.accounts=data.accounts;
-    var match=state.accounts.find(function(a){return a.name===savedAcct});
-    if(match){
-      state.accountName=match.name;
-      state.unit=match.name;
-      loadCart();
-      Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
-    } else {
-      render();
-    }
-  });
+  // Wholesale — need to verify account still active
+  var hasCachedProducts=cacheGet(PROD_CACHE_KEY);
+  var hasCachedAvail=cacheGet(AVAIL_CACHE_KEY,AVAIL_TTL);
+  if(hasCachedProducts) state.products=hasCachedProducts;
+  if(hasCachedAvail) state.availability=hasCachedAvail;
+  state.accountName=savedAcct;
+  state.unit=savedAcct;
+  loadCart();
+  if(hasCachedProducts&&hasCachedAvail){
+    go("client");
+    loadProducts(true);loadAvailability(true);
+  } else {
+    showLoading("Loading...");
+    Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
+  }
 } else if(savedUnit&&savedUnit!=="wholesale"){
+  var hasCachedProducts=cacheGet(PROD_CACHE_KEY);
+  var hasCachedAvail=cacheGet(AVAIL_CACHE_KEY,AVAIL_TTL);
+  if(hasCachedProducts) state.products=hasCachedProducts;
+  if(hasCachedAvail) state.availability=hasCachedAvail;
   state.unit=savedUnit;
   loadCart();
-  showLoading("Loading...");
-  Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
+  if(hasCachedProducts&&hasCachedAvail){
+    go("client");
+    loadProducts(true);loadAvailability(true);
+  } else {
+    showLoading("Loading...");
+    Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
+  }
 } else {
   render();
 }
