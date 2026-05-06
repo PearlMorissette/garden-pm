@@ -49,7 +49,6 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 .empty{text-align:center;padding:60px 24px;color:var(--muted)}
 .loading{text-align:center;padding:80px 24px;color:var(--muted);font-size:13px;letter-spacing:1px}
 .spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
-.stale-bar{background:#1a1a16;border-bottom:1px solid var(--border);padding:5px 28px;font-size:11px;color:var(--muted);text-align:right;letter-spacing:1px}
 @keyframes spin{to{transform:rotate(360deg)}}
 #auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh}
 .auth-card{background:var(--card);border:1px solid var(--border);padding:40px 36px;width:100%;max-width:320px}
@@ -89,7 +88,6 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
       <button class="pill" onclick="logout()" style="color:var(--muted)">Sign Out</button>
     </div>
   </nav>
-  <div id="stale-bar" class="stale-bar" style="display:none">Refreshing...</div>
   <div id="app-content"></div>
 </div>
 
@@ -97,25 +95,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 var API = "https://garden-pm-proxy-0a2d338d45e9.herokuapp.com";
 var ADMIN_CODE = "garden2024";
 var AUTH_KEY = "gpm_admin_auth";
-var CACHE_VERSION = "v6.1";
-var CACHE_VER_KEY = "gpm_adm_ver";
-var ADMIN_PROD_KEY = "gpm_adm_products";
-var ADMIN_AVAIL_KEY = "gpm_adm_availability";
 var ADMIN_ORDERS_KEY = "gpm_adm_orders";
-var AVAIL_TTL = 60 * 1000;
-var ORDERS_TTL = 2 * 60 * 1000;
-var PROD_TTL = 10 * 60 * 1000;
-
-// Auto-clear cache if version has changed
-(function(){
-  try{
-    if(localStorage.getItem(CACHE_VER_KEY)!==CACHE_VERSION){
-      [ADMIN_PROD_KEY,ADMIN_AVAIL_KEY,ADMIN_ORDERS_KEY,"gpm_availability"].forEach(function(k){localStorage.removeItem(k)});
-      localStorage.setItem(CACHE_VER_KEY,CACHE_VERSION);
-    }
-  }catch(e){}
-})();
-
 
 var state = {
   tab: "availability",
@@ -145,34 +125,18 @@ function api(params){
   return fetch(API+"?"+params).then(function(r){return r.json()});
 }
 
-// ── CACHE ──────────────────────────────────────────────────
+// ── CACHE (orders only) ────────────────────────────────────
 
 function cacheSet(key,data){
   try{localStorage.setItem(key,JSON.stringify({ts:Date.now(),data:data}))}catch(e){}
 }
 
-function cacheGet(key,maxAge){
-  try{
-    var raw=localStorage.getItem(key);
-    if(!raw) return null;
-    var obj=JSON.parse(raw);
-    if(maxAge && Date.now()-obj.ts > maxAge) return null;
-    return obj.data;
-  }catch(e){return null}
-}
-
-function cacheGetStale(key){
-  // Returns data regardless of age — used for instant render before refresh
+function cacheGet(key){
   try{
     var raw=localStorage.getItem(key);
     if(!raw) return null;
     return JSON.parse(raw).data;
   }catch(e){return null}
-}
-
-function showStaleBar(show){
-  var bar=document.getElementById("stale-bar");
-  if(bar) bar.style.display=show?"block":"none";
 }
 
 // ── AUTH ───────────────────────────────────────────────────
@@ -190,34 +154,9 @@ function tryAdmin(){
 function showAdmin(){
   document.getElementById("auth-screen").style.display="none";
   document.getElementById("main-app").style.display="block";
-
-  // Load from cache immediately — show UI without waiting
-  var cachedProducts = cacheGetStale(ADMIN_PROD_KEY);
-  var cachedAvail = cacheGetStale(ADMIN_AVAIL_KEY);
-  var cachedOrders = cacheGetStale(ADMIN_ORDERS_KEY);
-
-  var hasCached = cachedProducts && cachedAvail && cachedOrders;
-
-  if(cachedProducts) state.products = cachedProducts;
-  if(cachedAvail) state.availability = cachedAvail;
-  if(cachedOrders) state.orders = cachedOrders;
-
-  if(hasCached){
-    // Render instantly from cache, then refresh in background
-    renderTab();
-    showStaleBar(true);
-    refreshAll().then(function(){
-      showStaleBar(false);
-      renderTab();
-    });
-  } else {
-    // First visit — must fetch
-    showLoading();
-    refreshAll().then(function(){
-      showStaleBar(false);
-      renderTab();
-    });
-  }
+  showLoading();
+  // Always fetch fresh on load — products and availability never cached
+  Promise.all([fetchProducts(),fetchAvailability(),fetchOrders()]).then(function(){renderTab()});
 }
 
 function logout(){
@@ -235,54 +174,54 @@ function showLoading(){
 // ── DATA FETCHERS ──────────────────────────────────────────
 
 function fetchProducts(){
+  // Always fresh — no cache
   return api("action=getProducts").then(function(data){
-    if(data.products){state.products=data.products;cacheSet(ADMIN_PROD_KEY,data.products)}
+    if(data.products) state.products=data.products;
   }).catch(function(e){console.error("fetchProducts",e)});
 }
 
 function fetchAvailability(){
+  // Always fresh — no cache, ensures sheet edits and admin edits stay in sync
   return api("action=getAvailability").then(function(data){
-    if(data.availability){state.availability=data.availability;cacheSet(ADMIN_AVAIL_KEY,data.availability)}
+    if(data.availability) state.availability=data.availability;
   }).catch(function(e){console.error("fetchAvailability",e)});
 }
 
 function fetchOrders(){
+  // Orders: cache for instant render, always refresh after
   return api("action=getOrders&unit=All").then(function(data){
-    if(data.orders){state.orders=data.orders;cacheSet(ADMIN_ORDERS_KEY,data.orders)}
+    if(data.orders){
+      state.orders=data.orders;
+      cacheSet(ADMIN_ORDERS_KEY,data.orders);
+    }
   }).catch(function(e){console.error("fetchOrders",e)});
-}
-
-function refreshAll(){
-  // Always fetch all three in parallel — admin needs fresh data
-  return Promise.all([fetchProducts(), fetchAvailability(), fetchOrders()]);
 }
 
 // ── TAB SWITCHING ──────────────────────────────────────────
 
 function switchTab(tab){
   state.tab=tab;
+  renderTab(); // render current state immediately
 
-  // Render immediately from whatever is in state (already cache-loaded)
-  renderTab();
-
-  // Background refresh — only fetch what this tab needs
-  showStaleBar(true);
-  var refreshPromise;
+  // Always re-fetch what this tab needs
+  var promise;
   if(tab==="availability"){
-    refreshPromise=Promise.all([fetchProducts(),fetchAvailability()]);
+    promise=Promise.all([fetchProducts(),fetchAvailability()]);
   } else if(tab==="orders"){
-    refreshPromise=fetchOrders();
+    // Render from cache instantly, then fetch fresh
+    var cached=cacheGet(ADMIN_ORDERS_KEY);
+    if(cached){state.orders=cached;renderTab();}
+    promise=fetchOrders();
   } else {
-    refreshPromise=refreshAll();
+    // Dashboard: cached orders render first, fresh fetch after
+    var cached=cacheGet(ADMIN_ORDERS_KEY);
+    if(cached){state.orders=cached;renderTab();}
+    promise=Promise.all([fetchProducts(),fetchOrders()]);
   }
-  refreshPromise.then(function(){
-    showStaleBar(false);
-    renderTab();
-  });
+  promise.then(function(){renderTab()});
 }
 
 function renderTab(){
-  // Update nav active states
   document.getElementById("tab-avail").classList.toggle("active",state.tab==="availability");
   document.getElementById("tab-avail").textContent="Availability";
   document.getElementById("tab-avail").disabled=false;
@@ -292,7 +231,6 @@ function renderTab(){
   document.getElementById("tab-dash").classList.toggle("active",state.tab==="dashboard");
   document.getElementById("tab-dash").textContent="Dashboard";
   document.getElementById("tab-dash").disabled=false;
-
   if(state.tab==="availability") renderAvailability();
   else if(state.tab==="orders") renderOrders();
   else renderDashboard();
@@ -330,17 +268,14 @@ function renderAvailability(){
 function toggleAvail(id){
   var cur=state.availability[String(id)]||{on:false,remaining:null};
   var newOn=!cur.on;
+  // Optimistic update
   state.availability[String(id)]=Object.assign({},cur,{on:newOn});
-  cacheSet(ADMIN_AVAIL_KEY,state.availability);
   renderAvailability();
   api("action=setOne&id="+id+"&on="+newOn).then(function(r){
     if(r.success){
       showToast(newOn?"On":"Off");
-      try{localStorage.removeItem("gpm_availability")}catch(e){}
-      fetchAvailability().then(function(){
-        cacheSet(ADMIN_AVAIL_KEY,state.availability);
-        renderAvailability();
-      });
+      // Re-fetch to confirm sheet state is authoritative
+      fetchAvailability().then(function(){renderAvailability()});
     } else {
       showToast("Error saving");
       state.availability[String(id)]=cur;
@@ -352,16 +287,13 @@ function toggleAvail(id){
 function setMax(id,val){
   var qty=parseFloat(val)||0;
   var cur=state.availability[String(id)]||{on:false,remaining:null};
+  // Optimistic update
   state.availability[String(id)]=Object.assign({},cur,{remaining:qty||null});
-  cacheSet(ADMIN_AVAIL_KEY,state.availability);
   api("action=setMax&id="+id+"&max="+qty).then(function(r){
     if(r.success){
       showToast("QTY saved");
-      try{localStorage.removeItem("gpm_availability")}catch(e){}
-      fetchAvailability().then(function(){
-        cacheSet(ADMIN_AVAIL_KEY,state.availability);
-        renderAvailability();
-      });
+      // Re-fetch to confirm sheet state is authoritative
+      fetchAvailability().then(function(){renderAvailability()});
     } else {
       showToast("Error saving");
       state.availability[String(id)]=cur;
