@@ -102,6 +102,7 @@ var state = {
   search: "",
   catFilter: "All",
   historyFilter: "all",
+  station: "",
   openOrders: {}
 };
 
@@ -216,6 +217,7 @@ function selectUnit(unit){
   try{localStorage.setItem(UNIT_KEY,unit);localStorage.removeItem(ACCT_KEY)}catch(e){}
   state.catFilter="All";
   state.search="";
+  state.station="";
   loadCart();
   showLoading("Loading this week...");
   Promise.all([loadProducts(),loadAvailability()]).then(function(){go("client")});
@@ -418,6 +420,16 @@ function checkoutHTML(){
     });
     html+='<div class="total-bar"><span style="color:var(--muted);font-size:12px">Order Total</span>'+
       '<span style="font-family:Georgia,serif;font-size:28px;font-weight:300">'+fmt(total)+'</span></div>'+
+      (state.unit==="Restaurant"?
+      '<label class="field-label" style="margin-top:16px">Station <span style="color:#c44">*</span></label>'+
+      '<select id="order-station" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--cream);padding:10px 14px;font-size:13px;outline:none;margin-bottom:16px;appearance:none" onchange="state.station=this.value">'+
+      '<option value="" style="background:var(--bg)">Select station...</option>'+
+      '<option value="Garde Manger" style="background:var(--bg)"'+(state.station==="Garde Manger"?" selected":"")+'>Garde Manger</option>'+
+      '<option value="Juice/Cocktail" style="background:var(--bg)"'+(state.station==="Juice/Cocktail"?" selected":"")+'>Juice/Cocktail</option>'+
+      '<option value="Pastry" style="background:var(--bg)"'+(state.station==="Pastry"?" selected":"")+'>Pastry</option>'+
+      '<option value="PDR" style="background:var(--bg)"'+(state.station==="PDR"?" selected":"")+'>PDR</option>'+
+      '<option value="Sauce" style="background:var(--bg)"'+(state.station==="Sauce"?" selected":"")+'>Sauce</option>'+
+      '</select>':"")+
       '<label class="field-label">Note (optional)</label>'+
       '<textarea class="field-textarea" id="order-note" placeholder="Timing, substitutions..."></textarea>'+
       '<button class="btn-primary btn-full" style="margin-top:16px" id="submit-btn" onclick="submitOrder()">Submit Order</button>';
@@ -433,6 +445,11 @@ function updateCartCheckout(id,delta,maxQty){
 }
 
 function submitOrder(){
+  // Require station for Restaurant orders
+  if(state.unit==="Restaurant"&&!state.station){
+    showToast("Please select a station");
+    return;
+  }
   var btn=document.getElementById("submit-btn");
   if(btn){btn.disabled=true;btn.textContent="Submitting...";}
   var items=Object.entries(state.cart).filter(function(e){return e[1]>0}).map(function(e){
@@ -442,10 +459,11 @@ function submitOrder(){
   var total=items.reduce(function(s,i){return s+i.subtotal},0);
   var note=document.getElementById("order-note")?document.getElementById("order-note").value:"";
   var orderUnit=state.accountName||state.unit;
-  var order={unit:orderUnit,date:new Date().toISOString(),items:items,total:total,note:note};
+  var order={unit:orderUnit,station:state.unit==="Restaurant"?state.station:"",date:new Date().toISOString(),items:items,total:total,note:note};
   api("action=submitOrder&data="+encodeURIComponent(JSON.stringify(order))).then(function(r){
     if(r.success){
       state.cart={};saveCart();
+      state.station="";
       // Bust orders cache so history is fresh
       try{localStorage.removeItem(ORDERS_CACHE_KEY+"_"+(state.accountName||state.unit))}catch(e){}
       showToast("Order submitted");
