@@ -122,7 +122,7 @@ function showToast(msg){
 }
 
 function api(params){
-  return fetch(API+"?"+params).then(function(r){return r.json()});
+  return fetch(API+"?"+params+"&_="+Date.now()).then(function(r){return r.json()});
 }
 
 // ── CACHE (orders only) ────────────────────────────────────
