@@ -288,8 +288,8 @@ function renderTab(){
 // ── AVAILABILITY ───────────────────────────────────────────
 
 function renderAvailability(){
-  var cats=["All"].concat(Array.from(new Set(state.products.map(function(p){return p.category}))));
-  var filtered=state.products.filter(function(p){return state.adminCat==="All"||p.category===state.adminCat});
+  var cats=["All"].concat(Array.from(new Set(state.products.map(function(p){return p.category.trim()}))));
+  var filtered=state.products.filter(function(p){return state.adminCat==="All"||p.category.trim()===state.adminCat});
   var onCount=Object.values(state.availability).filter(function(v){return v.on}).length;
   var html='<div class="wrap">'+
     '<div class="pre">This Week</div>'+
