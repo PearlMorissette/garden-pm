@@ -97,12 +97,25 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:16px 2
 var API = "https://garden-pm-proxy-0a2d338d45e9.herokuapp.com";
 var ADMIN_CODE = "garden2024";
 var AUTH_KEY = "gpm_admin_auth";
+var CACHE_VERSION = "v6.1";
+var CACHE_VER_KEY = "gpm_adm_ver";
 var ADMIN_PROD_KEY = "gpm_adm_products";
 var ADMIN_AVAIL_KEY = "gpm_adm_availability";
 var ADMIN_ORDERS_KEY = "gpm_adm_orders";
-var AVAIL_TTL = 60 * 1000;      // 1 min — admin sees fresher availability
-var ORDERS_TTL = 2 * 60 * 1000; // 2 min
-var PROD_TTL = 10 * 60 * 1000;  // 10 min — products rarely change
+var AVAIL_TTL = 60 * 1000;
+var ORDERS_TTL = 2 * 60 * 1000;
+var PROD_TTL = 10 * 60 * 1000;
+
+// Auto-clear cache if version has changed
+(function(){
+  try{
+    if(localStorage.getItem(CACHE_VER_KEY)!==CACHE_VERSION){
+      [ADMIN_PROD_KEY,ADMIN_AVAIL_KEY,ADMIN_ORDERS_KEY,"gpm_availability"].forEach(function(k){localStorage.removeItem(k)});
+      localStorage.setItem(CACHE_VER_KEY,CACHE_VERSION);
+    }
+  }catch(e){}
+})();
+
 
 var state = {
   tab: "availability",
@@ -321,8 +334,18 @@ function toggleAvail(id){
   cacheSet(ADMIN_AVAIL_KEY,state.availability);
   renderAvailability();
   api("action=setOne&id="+id+"&on="+newOn).then(function(r){
-    if(r.success) showToast(newOn?"On":"Off");
-    else{showToast("Error saving");state.availability[String(id)]=cur;renderAvailability();}
+    if(r.success){
+      showToast(newOn?"On":"Off");
+      try{localStorage.removeItem("gpm_availability")}catch(e){}
+      fetchAvailability().then(function(){
+        cacheSet(ADMIN_AVAIL_KEY,state.availability);
+        renderAvailability();
+      });
+    } else {
+      showToast("Error saving");
+      state.availability[String(id)]=cur;
+      renderAvailability();
+    }
   });
 }
 
@@ -332,7 +355,18 @@ function setMax(id,val){
   state.availability[String(id)]=Object.assign({},cur,{remaining:qty||null});
   cacheSet(ADMIN_AVAIL_KEY,state.availability);
   api("action=setMax&id="+id+"&max="+qty).then(function(r){
-    if(r.success) showToast("QTY saved");
+    if(r.success){
+      showToast("QTY saved");
+      try{localStorage.removeItem("gpm_availability")}catch(e){}
+      fetchAvailability().then(function(){
+        cacheSet(ADMIN_AVAIL_KEY,state.availability);
+        renderAvailability();
+      });
+    } else {
+      showToast("Error saving");
+      state.availability[String(id)]=cur;
+      renderAvailability();
+    }
   });
 }
 
