@@ -345,12 +345,13 @@ function renderOrders(){
     var ds=new Date(o.date).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric",year:"numeric"});
     var open=state.openOrders[o.id];
     var unitColor=o.unit==="Restaurant"?"var(--accent)":o.unit==="Bakery"?"#8a7a5a":"#7a8a6a";
+    var unitLabel=o.unit==="Restaurant"&&o.station?o.unit+" · "+o.station:o.unit;
     html+='<div class="order-card">'+
       '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];renderOrders()">'+
       '<div><div style="font-size:13px">'+ds+'</div>'+
       '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+' items</div></div>'+
-      '<div style="font-size:11px;letter-spacing:0.5px;color:'+unitColor+'">'+o.unit+'</div>'+
-      '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+'</div>'+
+      '<div style="font-size:11px;letter-spacing:0.5px;color:'+unitColor+'">'+unitLabel+'</div>'+
+      '<div style="text-align:right"><div style="font-family:Georgia,serif;font-size:16px">'+fmt(o.total)+'</div><div style="font-size:10px;color:var(--muted)">#'+o.id+'</div></div>'+
       '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+'</div></div>'+
       (open?'<div class="order-detail">'+
       o.items.map(function(i){return'<div class="order-detail-row"><span>'+i.name+'</span><span style="color:var(--muted)">'+i.qty+' '+i.unit+' · '+fmt(i.subtotal)+'</span></div>'}).join("")+
@@ -416,7 +417,25 @@ function renderDashboard(){
         '<div style="background:var(--border);height:6px;border-radius:3px">'+
         '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
     }).join("")+"</div></div>"+
-    '<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity Ordered</div>'+
+    // Spend by Station (Restaurant orders only)
+    (function(){
+      var rpmOrders=orders.filter(function(o){return o.unit==="Restaurant"&&o.station});
+      if(!rpmOrders.length) return "";
+      var stationSpend={};
+      rpmOrders.forEach(function(o){stationSpend[o.station]=(stationSpend[o.station]||0)+o.total});
+      var stationEntries=Object.entries(stationSpend).sort(function(a,b){return b[1]-a[1]});
+      var maxStation=stationEntries[0][1];
+      html+='<div style="margin-bottom:48px"><div class="pre">Restaurant Spend by Station</div>'+
+        '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
+        stationEntries.map(function(e){
+          var pct=Math.round((e[1]/maxStation)*100);
+          return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
+            '<span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
+            '<div style="background:var(--border);height:6px;border-radius:3px">'+
+            '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
+        }).join("")+'</div></div>';
+    })();
+    html+='<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity Ordered</div>'+
     '<div style="display:flex;flex-direction:column;gap:6px;margin-top:16px">'+
     skuEntries.map(function(e){
       var p=state.products.find(function(p){return p.name===e[0]});
