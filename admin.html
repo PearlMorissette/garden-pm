@@ -420,7 +420,7 @@ function renderDashboard(){
     // Spend by Station (Restaurant orders only)
     (function(){
       var rpmOrders=orders.filter(function(o){return o.unit==="Restaurant"&&o.station});
-      if(!rpmOrders.length) return "";
+      if(!rpmOrders.length) return;
       var stationSpend={};
       rpmOrders.forEach(function(o){stationSpend[o.station]=(stationSpend[o.station]||0)+o.total});
       var stationEntries=Object.entries(stationSpend).sort(function(a,b){return b[1]-a[1]});
