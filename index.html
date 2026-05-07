@@ -511,6 +511,8 @@ function dashboardHTML(){
   var lifetime=orders.reduce(function(s,o){return s+o.total},0);
   var ytdOrders=orders.filter(function(o){return yearKey(o.date)===yearKey(new Date())});
   var ytdSpend=ytdOrders.reduce(function(s,o){return s+o.total},0);
+
+  // Spend by category
   var catSpend={};
   orders.forEach(function(o){o.items.forEach(function(i){
     var p=state.products.find(function(p){return p.id===i.id});
@@ -519,65 +521,93 @@ function dashboardHTML(){
   })});
   var catEntries=Object.entries(catSpend).sort(function(a,b){return b[1]-a[1]});
   var maxCat=catEntries.length?catEntries[0][1]:1;
+
+  // Top items by quantity
   var skuQty={};
   orders.forEach(function(o){o.items.forEach(function(i){skuQty[i.name]=(skuQty[i.name]||0)+i.qty})});
-  var skuEntries=Object.entries(skuQty).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
+  var skuQtyEntries=Object.entries(skuQty).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
+
+  // Top items by spend
+  var skuSpend={};
+  orders.forEach(function(o){o.items.forEach(function(i){skuSpend[i.name]=(skuSpend[i.name]||0)+i.subtotal})});
+  var skuSpendEntries=Object.entries(skuSpend).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
+
+  // Monthly spend
   var monthSpend={};
   orders.forEach(function(o){var mk=monthKey(o.date);monthSpend[mk]=(monthSpend[mk]||0)+o.total});
   var monthEntries=Object.entries(monthSpend).sort(function(a,b){return a[0]>b[0]?1:-1}).slice(-6);
   var maxMonth=monthEntries.length?Math.max.apply(null,monthEntries.map(function(e){return e[1]})):1;
+
   var html='<div class="wrap-md"><div class="pre">'+(state.accountName||state.unit)+'</div><div class="h1">Dashboard</div>'+
     '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:40px">'+
     '<div class="stat-card"><div class="stat-label">Lifetime</div><div class="stat-value">'+fmt(lifetime)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">YTD Spend</div><div class="stat-value">'+fmt(ytdSpend)+'</div><div class="stat-sub">'+ytdOrders.length+' orders</div></div>'+
     '<div class="stat-card"><div class="stat-label">Total Orders</div><div class="stat-value">'+orders.length+'</div></div>'+
-    '</div>'+
-    '<div style="margin-bottom:48px"><div class="pre">Spend by Category</div>'+
+    '</div>';
+
+  // Spend by category
+  html+='<div style="margin-bottom:48px"><div class="pre">Spend by Category</div>'+
     '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
     catEntries.map(function(e){
       var pct=Math.round((e[1]/maxCat)*100);
       return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
         '<div style="background:var(--border);height:6px;border-radius:3px"><div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
-    }).join("")+"</div></div>"+
-    // Spend by Station (Restaurant only)
-    if(state.unit==="Restaurant"){
-      var stationOrders=orders.filter(function(o){return o.station});
-      if(stationOrders.length){
-        var stationSpend={};
-        stationOrders.forEach(function(o){stationSpend[o.station]=(stationSpend[o.station]||0)+o.total});
-        var stationEntries=Object.entries(stationSpend).sort(function(a,b){return b[1]-a[1]});
-        var maxStation=stationEntries[0][1];
-        html+='<div style="margin-bottom:48px"><div class="pre">Spend by Station</div>'+
-          '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
-          stationEntries.map(function(e){
-            var pct=Math.round((e[1]/maxStation)*100);
-            return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
-              '<span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
-              '<div style="background:var(--border);height:6px;border-radius:3px">'+
-              '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
-          }).join("")+'</div></div>';
-      }
+    }).join("")+'</div></div>';
+
+  // Spend by station — Restaurant only
+  if(state.unit==="Restaurant"){
+    var stationOrders=orders.filter(function(o){return o.station});
+    if(stationOrders.length){
+      var stationSpend={};
+      stationOrders.forEach(function(o){stationSpend[o.station]=(stationSpend[o.station]||0)+o.total});
+      var stationEntries=Object.entries(stationSpend).sort(function(a,b){return b[1]-a[1]});
+      var maxStation=stationEntries[0][1];
+      html+='<div style="margin-bottom:48px"><div class="pre">Spend by Station</div>'+
+        '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
+        stationEntries.map(function(e){
+          var pct=Math.round((e[1]/maxStation)*100);
+          return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
+            '<span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
+            '<div style="background:var(--border);height:6px;border-radius:3px">'+
+            '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
+        }).join("")+'</div></div>';
     }
-    html+='<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity</div>'+
+  }
+
+  // Top items by quantity
+  html+='<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity</div>'+
     '<div style="display:flex;flex-direction:column;gap:6px;margin-top:16px">'+
-    skuEntries.map(function(e){
+    skuQtyEntries.map(function(e){
       var p=state.products.find(function(p){return p.name===e[0]});
       return '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--card);border:1px solid var(--border);font-size:13px">'+
         '<span>'+e[0]+'</span><span style="color:var(--accent);font-family:Georgia,serif">'+e[1]+' '+(p?p.unit:"")+'</span></div>';
-    }).join("")+"</div></div>"+
-    (monthEntries.length>1?
-    '<div style="margin-bottom:48px"><div class="pre">Monthly Spend</div>'+
-    '<div style="display:flex;align-items:flex-end;gap:8px;margin-top:16px;height:120px">'+
-    monthEntries.map(function(e){
-      var pct=Math.round((e[1]/maxMonth)*100);
-      var parts=e[0].split("-");
-      var label=new Date(parseInt(parts[0]),parseInt(parts[1])-1,1).toLocaleDateString("en-CA",{month:"short"});
-      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
-        '<div style="font-size:10px;color:var(--accent)">'+fmt(e[1])+'</div>'+
-        '<div style="flex:1;width:100%;display:flex;align-items:flex-end">'+
-        '<div style="background:var(--accent);width:100%;height:'+pct+'%;min-height:4px;border-radius:2px 2px 0 0"></div></div>'+
-        '<div style="font-size:10px;color:var(--muted)">'+label+'</div></div>';
-    }).join("")+'</div></div>':"")+"</div>";
+    }).join("")+'</div></div>';
+
+  // Top items by spend
+  html+='<div style="margin-bottom:48px"><div class="pre">Top Items by Spend</div>'+
+    '<div style="display:flex;flex-direction:column;gap:6px;margin-top:16px">'+
+    skuSpendEntries.map(function(e){
+      return '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--card);border:1px solid var(--border);font-size:13px">'+
+        '<span>'+e[0]+'</span><span style="color:var(--accent);font-family:Georgia,serif">'+fmt(e[1])+'</span></div>';
+    }).join("")+'</div></div>';
+
+  // Monthly spend chart
+  if(monthEntries.length>1){
+    html+='<div style="margin-bottom:48px"><div class="pre">Monthly Spend</div>'+
+      '<div style="display:flex;align-items:flex-end;gap:8px;margin-top:16px;height:120px">'+
+      monthEntries.map(function(e){
+        var pct=Math.round((e[1]/maxMonth)*100);
+        var parts=e[0].split("-");
+        var label=new Date(parseInt(parts[0]),parseInt(parts[1])-1,1).toLocaleDateString("en-CA",{month:"short"});
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
+          '<div style="font-size:10px;color:var(--accent)">'+fmt(e[1])+'</div>'+
+          '<div style="flex:1;width:100%;display:flex;align-items:flex-end">'+
+          '<div style="background:var(--accent);width:100%;height:'+pct+'%;min-height:4px;border-radius:2px 2px 0 0"></div></div>'+
+          '<div style="font-size:10px;color:var(--muted)">'+label+'</div></div>';
+      }).join("")+'</div></div>';
+  }
+
+  html+='</div>';
   return html;
 }
 
@@ -586,7 +616,7 @@ function orderCardHTML(o,screen){
   var open=state.openOrders[o.id];
   return '<div class="order-card">'+
     '<div class="order-head" onclick="state.openOrders['+o.id+']=!state.openOrders['+o.id+'];go(\''+screen+'\')">'+
-    '<div><div style="font-size:13px">'+ds+'</div>'+
+    '<div><div style="font-size:13px">'+ds+(o.unit==="Restaurant"&&o.station?' <span style="font-size:11px;color:var(--accent);font-family:system-ui">· '+o.station+'</span>':'')+'</div>'+
     '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+o.items.length+' items</div></div>'+
     '<div style="font-family:Georgia,serif;font-size:16px;text-align:right">'+fmt(o.total)+'</div>'+
     '<div style="text-align:right;font-size:11px;color:var(--muted)">'+(open?"▲":"▼")+'</div></div>'+
