@@ -377,6 +377,7 @@ function renderDashboard(){
   var ytdOrders=orders.filter(function(o){return yearKey(o.date)===yearKey(new Date())});
   var ytdSpend=ytdOrders.reduce(function(s,o){return s+o.total},0);
 
+  // Spend by category
   var catSpend={};
   orders.forEach(function(o){o.items.forEach(function(i){
     var p=state.products.find(function(p){return p.id===i.id});
@@ -386,10 +387,17 @@ function renderDashboard(){
   var catEntries=Object.entries(catSpend).sort(function(a,b){return b[1]-a[1]});
   var maxCat=catEntries.length?catEntries[0][1]:1;
 
+  // Top items by quantity
   var skuQty={};
   orders.forEach(function(o){o.items.forEach(function(i){skuQty[i.name]=(skuQty[i.name]||0)+i.qty})});
-  var skuEntries=Object.entries(skuQty).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
+  var skuQtyEntries=Object.entries(skuQty).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
 
+  // Top items by spend
+  var skuSpend={};
+  orders.forEach(function(o){o.items.forEach(function(i){skuSpend[i.name]=(skuSpend[i.name]||0)+i.subtotal})});
+  var skuSpendEntries=Object.entries(skuSpend).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
+
+  // Monthly by unit
   var monthRpm={},monthBak={},monthWs={};
   orders.forEach(function(o){
     var mk=monthKey(o.date);
@@ -407,8 +415,10 @@ function renderDashboard(){
     '<div class="stat-card"><div class="stat-label">Restaurant</div><div class="stat-value">'+fmt(rpmLife)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Bakery</div><div class="stat-value">'+fmt(bakLife)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Wholesale</div><div class="stat-value">'+fmt(wsLife)+'</div></div>'+
-    '</div>'+
-    '<div style="margin-bottom:48px"><div class="pre">Spend by Category</div>'+
+    '</div>';
+
+  // Spend by category
+  html+='<div style="margin-bottom:48px"><div class="pre">Spend by Category</div>'+
     '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
     catEntries.map(function(e){
       var pct=Math.round((e[1]/maxCat)*100);
@@ -416,56 +426,71 @@ function renderDashboard(){
         '<span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
         '<div style="background:var(--border);height:6px;border-radius:3px">'+
         '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
-    }).join("")+"</div></div>"+
-    // Spend by Station (Restaurant orders only)
-    var rpmStationOrders=orders.filter(function(o){return o.unit==="Restaurant"&&o.station});
-    if(rpmStationOrders.length){
-      var stationSpend={};
-      rpmStationOrders.forEach(function(o){stationSpend[o.station]=(stationSpend[o.station]||0)+o.total});
-      var stationEntries=Object.entries(stationSpend).sort(function(a,b){return b[1]-a[1]});
-      var maxStation=stationEntries[0][1];
-      html+='<div style="margin-bottom:48px"><div class="pre">Restaurant Spend by Station</div>'+
-        '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
-        stationEntries.map(function(e){
-          var pct=Math.round((e[1]/maxStation)*100);
-          return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
-            '<span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
-            '<div style="background:var(--border);height:6px;border-radius:3px">'+
-            '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
-        }).join("")+'</div></div>';
-    }
-    html+='<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity Ordered</div>'+
+    }).join("")+'</div></div>';
+
+  // Spend by station — Restaurant orders only
+  var rpmStationOrders=orders.filter(function(o){return o.unit==="Restaurant"&&o.station});
+  if(rpmStationOrders.length){
+    var stationSpend={};
+    rpmStationOrders.forEach(function(o){stationSpend[o.station]=(stationSpend[o.station]||0)+o.total});
+    var stationEntries=Object.entries(stationSpend).sort(function(a,b){return b[1]-a[1]});
+    var maxStation=stationEntries[0][1];
+    html+='<div style="margin-bottom:48px"><div class="pre">Restaurant Spend by Station</div>'+
+      '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
+      stationEntries.map(function(e){
+        var pct=Math.round((e[1]/maxStation)*100);
+        return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
+          '<span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
+          '<div style="background:var(--border);height:6px;border-radius:3px">'+
+          '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
+      }).join("")+'</div></div>';
+  }
+
+  // Top items by quantity
+  html+='<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity Ordered</div>'+
     '<div style="display:flex;flex-direction:column;gap:6px;margin-top:16px">'+
-    skuEntries.map(function(e){
+    skuQtyEntries.map(function(e){
       var p=state.products.find(function(p){return p.name===e[0]});
       return '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--card);border:1px solid var(--border);font-size:13px">'+
         '<span>'+e[0]+'</span><span style="color:var(--accent);font-family:Georgia,serif">'+e[1]+' '+(p?p.unit:"")+'</span></div>';
-    }).join("")+"</div></div>"+
-    (allMonths.length>1?
-    '<div style="margin-bottom:48px"><div class="pre">Monthly Spend by Unit</div>'+
-    '<div style="display:flex;align-items:flex-end;gap:8px;margin-top:16px;height:140px">'+
-    allMonths.map(function(m){
-      var rpm=monthRpm[m]||0,bak=monthBak[m]||0,ws=monthWs[m]||0,total=rpm+bak+ws;
-      var pct=Math.round((total/maxMonth)*100);
-      var rpmPct=total>0?Math.round((rpm/total)*100):0;
-      var bakPct=total>0?Math.round((bak/total)*100):0;
-      var wsPct=100-rpmPct-bakPct;
-      var label=new Date(m.split("-")[0],parseInt(m.split("-")[1])-1,1).toLocaleDateString("en-CA",{month:"short"});
-      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
-        '<div style="font-size:10px;color:var(--muted)">'+fmt(total)+'</div>'+
-        '<div style="flex:1;width:100%;display:flex;align-items:flex-end">'+
-        '<div style="width:100%;height:'+pct+'%;min-height:4px;border-radius:2px 2px 0 0;overflow:hidden;display:flex;flex-direction:column">'+
-        '<div style="background:var(--accent);flex:'+rpmPct+'"></div>'+
-        '<div style="background:#5a4a2a;flex:'+bakPct+'"></div>'+
-        '<div style="background:#3a5a3a;flex:'+wsPct+'"></div>'+
-        '</div></div><div style="font-size:10px;color:var(--muted)">'+label+'</div></div>';
-    }).join("")+
-    '</div><div style="display:flex;gap:16px;margin-top:12px;font-size:11px;color:var(--muted)">'+
-    '<span><span style="display:inline-block;width:10px;height:10px;background:var(--accent);border-radius:2px;margin-right:4px"></span>Restaurant</span>'+
-    '<span><span style="display:inline-block;width:10px;height:10px;background:#5a4a2a;border-radius:2px;margin-right:4px"></span>Bakery</span>'+
-    '<span><span style="display:inline-block;width:10px;height:10px;background:#3a5a3a;border-radius:2px;margin-right:4px"></span>Wholesale</span>'+
-    '</div></div>':"")+"</div>";
+    }).join("")+'</div></div>';
 
+  // Top items by spend
+  html+='<div style="margin-bottom:48px"><div class="pre">Top Items by Spend</div>'+
+    '<div style="display:flex;flex-direction:column;gap:6px;margin-top:16px">'+
+    skuSpendEntries.map(function(e){
+      return '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--card);border:1px solid var(--border);font-size:13px">'+
+        '<span>'+e[0]+'</span><span style="color:var(--accent);font-family:Georgia,serif">'+fmt(e[1])+'</span></div>';
+    }).join("")+'</div></div>';
+
+  // Monthly spend by unit chart
+  if(allMonths.length>1){
+    html+='<div style="margin-bottom:48px"><div class="pre">Monthly Spend by Unit</div>'+
+      '<div style="display:flex;align-items:flex-end;gap:8px;margin-top:16px;height:140px">'+
+      allMonths.map(function(m){
+        var rpm=monthRpm[m]||0,bak=monthBak[m]||0,ws=monthWs[m]||0,total=rpm+bak+ws;
+        var pct=Math.round((total/maxMonth)*100);
+        var rpmPct=total>0?Math.round((rpm/total)*100):0;
+        var bakPct=total>0?Math.round((bak/total)*100):0;
+        var wsPct=100-rpmPct-bakPct;
+        var label=new Date(m.split("-")[0],parseInt(m.split("-")[1])-1,1).toLocaleDateString("en-CA",{month:"short"});
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
+          '<div style="font-size:10px;color:var(--muted)">'+fmt(total)+'</div>'+
+          '<div style="flex:1;width:100%;display:flex;align-items:flex-end">'+
+          '<div style="width:100%;height:'+pct+'%;min-height:4px;border-radius:2px 2px 0 0;overflow:hidden;display:flex;flex-direction:column">'+
+          '<div style="background:var(--accent);flex:'+rpmPct+'"></div>'+
+          '<div style="background:#5a4a2a;flex:'+bakPct+'"></div>'+
+          '<div style="background:#3a5a3a;flex:'+wsPct+'"></div>'+
+          '</div></div><div style="font-size:10px;color:var(--muted)">'+label+'</div></div>';
+      }).join("")+
+      '</div><div style="display:flex;gap:16px;margin-top:12px;font-size:11px;color:var(--muted)">'+
+      '<span><span style="display:inline-block;width:10px;height:10px;background:var(--accent);border-radius:2px;margin-right:4px"></span>Restaurant</span>'+
+      '<span><span style="display:inline-block;width:10px;height:10px;background:#5a4a2a;border-radius:2px;margin-right:4px"></span>Bakery</span>'+
+      '<span><span style="display:inline-block;width:10px;height:10px;background:#3a5a3a;border-radius:2px;margin-right:4px"></span>Wholesale</span>'+
+      '</div></div>';
+  }
+
+  html+='</div>';
   document.getElementById("app-content").innerHTML=html;
 }
 
