@@ -539,7 +539,26 @@ function dashboardHTML(){
       return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
         '<div style="background:var(--border);height:6px;border-radius:3px"><div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
     }).join("")+"</div></div>"+
-    '<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity</div>'+
+    // Spend by Station (Restaurant only)
+    (function(){
+      if(state.unit!=="Restaurant") return;
+      var rpmOrders=orders.filter(function(o){return o.station});
+      if(!rpmOrders.length) return;
+      var stationSpend={};
+      rpmOrders.forEach(function(o){stationSpend[o.station]=(stationSpend[o.station]||0)+o.total});
+      var stationEntries=Object.entries(stationSpend).sort(function(a,b){return b[1]-a[1]});
+      var maxStation=stationEntries[0][1];
+      html+='<div style="margin-bottom:48px"><div class="pre">Spend by Station</div>'+
+        '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">'+
+        stationEntries.map(function(e){
+          var pct=Math.round((e[1]/maxStation)*100);
+          return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
+            '<span>'+e[0]+'</span><span style="color:var(--accent)">'+fmt(e[1])+'</span></div>'+
+            '<div style="background:var(--border);height:6px;border-radius:3px">'+
+            '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
+        }).join("")+'</div></div>';
+    })();
+    html+='<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity</div>'+
     '<div style="display:flex;flex-direction:column;gap:6px;margin-top:16px">'+
     skuEntries.map(function(e){
       var p=state.products.find(function(p){return p.name===e[0]});
