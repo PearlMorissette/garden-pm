@@ -418,11 +418,10 @@ function renderDashboard(){
         '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
     }).join("")+"</div></div>"+
     // Spend by Station (Restaurant orders only)
-    (function(){
-      var rpmOrders=orders.filter(function(o){return o.unit==="Restaurant"&&o.station});
-      if(!rpmOrders.length) return;
+    var rpmStationOrders=orders.filter(function(o){return o.unit==="Restaurant"&&o.station});
+    if(rpmStationOrders.length){
       var stationSpend={};
-      rpmOrders.forEach(function(o){stationSpend[o.station]=(stationSpend[o.station]||0)+o.total});
+      rpmStationOrders.forEach(function(o){stationSpend[o.station]=(stationSpend[o.station]||0)+o.total});
       var stationEntries=Object.entries(stationSpend).sort(function(a,b){return b[1]-a[1]});
       var maxStation=stationEntries[0][1];
       html+='<div style="margin-bottom:48px"><div class="pre">Restaurant Spend by Station</div>'+
@@ -434,7 +433,7 @@ function renderDashboard(){
             '<div style="background:var(--border);height:6px;border-radius:3px">'+
             '<div style="background:var(--accent);height:6px;border-radius:3px;width:'+pct+'%"></div></div></div>';
         }).join("")+'</div></div>';
-    })();
+    }
     html+='<div style="margin-bottom:48px"><div class="pre">Top Items by Quantity Ordered</div>'+
     '<div style="display:flex;flex-direction:column;gap:6px;margin-top:16px">'+
     skuEntries.map(function(e){
